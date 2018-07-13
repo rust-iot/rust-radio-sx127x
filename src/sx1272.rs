@@ -1,37 +1,8 @@
 
-// Offsets for RSSI calculation
-const RSSI_OFFSET_LF: usize = -164;
-const RSSI_OFFSET_HF: usize = -157;
-
-// FSK bandwidth register values
-pub enum FskBandwidth
-{
-    Bandwidth2600   = 0x17,
-    Bandwidth3100   = 0x0F,
-    Bandwidth3900   = 0x07,
-    Bandwidth5200   = 0x16,
-    Bandwidth6300   = 0x0E,
-    Bandwidth7800   = 0x06,
-    Bandwidth10400  = 0x15,
-    Bandwidth12500  = 0x0D,
-    Bandwidth15600  = 0x05,
-    Bandwidth20800  = 0x14,
-    Bandwidth25000  = 0x0C,
-    Bandwidth31300  = 0x04,
-    Bandwidth41700  = 0x13,
-    Bandwidth50000  = 0x0B,
-    Bandwidth62500  = 0x03,
-    Bandwidth83333  = 0x12,
-    Bandwidth100000 = 0x0A,
-    Bandwidth125000 = 0x02,
-    Bandwidth166700 = 0x11,
-    Bandwidth200000 = 0x09,
-    Bandwidth250000 = 0x01,
-}
 
 pub mod FSK {
 pub enum Registers {
-    FIFO = 0x00,
+FIFO = 0x00,
 // Common settings
 OPMODE = 0x01,
 BITRATEMSB = 0x02,
@@ -109,16 +80,17 @@ DIOMAPPING2 = 0x41,
 // Version
 VERSION = 0x42,
 // Additional settings
-PLLHOP = 0x44,
-TCXO = 0x4B,
-PADAC = 0x4D,
-FORMERTEMP = 0x5B,
-BITRATEFRAC = 0x5D,
-AGCREF = 0x61,
-AGCTHRESH1 = 0x62,
-AGCTHRESH2 = 0x63,
-AGCTHRESH3 = 0x64,
-PLL = 0x70,
+AGCREF = 0x43,
+AGCTHRESH1 = 0x44,
+AGCTHRESH2 = 0x45,
+AGCTHRESH3 = 0x46,
+PLLHOP = 0x4B,
+TCXO = 0x58,
+PADAC = 0x5A,
+PLL = 0x5C,
+PLLLOWPN = 0x5E,
+FORMERTEMP = 0x6C,
+BITRATEFRAC = 0x70,
 }
 }
 
@@ -162,19 +134,14 @@ LR_PAYLOADLENGTH = 0x22,
 LR_PAYLOADMAXLENGTH = 0x23, 
 LR_HOPPERIOD = 0x24, 
 LR_FIFORXBYTEADDR = 0x25,
-LR_MODEMCONFIG3 = 0x26,
 LR_FEIMSB = 0x28,
 LR_FEIMID = 0x29,
 LR_FEILSB = 0x2A,
 LR_RSSIWIDEBAND = 0x2C,
-LR_TEST2F = 0x2F,
-LR_TEST30 = 0x30,
 LR_DETECTOPTIMIZE = 0x31,
 LR_INVERTIQ = 0x33,
-LR_TEST36 = 0x36,
 LR_DETECTIONTHRESHOLD = 0x37,
 LR_SYNCWORD = 0x39,
-LR_TEST3A = 0x3A,
 LR_INVERTIQ2 = 0x3B,
 
 // end of documented register in datasheet
@@ -184,15 +151,15 @@ LR_DIOMAPPING2 = 0x41,
 // Version
 LR_VERSION = 0x42,
 // Additional settings
-LR_PLLHOP = 0x44,
-LR_TCXO = 0x4B,
-LR_PADAC = 0x4D,
-LR_FORMERTEMP = 0x5B,
-LR_BITRATEFRAC = 0x5D,
-LR_AGCREF = 0x61,
-LR_AGCTHRESH1 = 0x62,
-LR_AGCTHRESH2 = 0x63,
-LR_AGCTHRESH3 = 0x64,
-LR_PLL = 0x70,
+LR_AGCREF = 0x43,
+LR_AGCTHRESH1 = 0x44,
+LR_AGCTHRESH2 = 0x45,
+LR_AGCTHRESH3 = 0x46,
+LR_PLLHOP = 0x4B,
+LR_TCXO = 0x58,
+LR_PADAC = 0x5A,
+LR_PLL = 0x5C,
+LR_PLLLOWPN = 0x5E,
+LR_FORMERTEMP = 0x6C,
 }
 }

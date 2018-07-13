@@ -13,9 +13,7 @@ use hal::blocking::spi;
 use hal::digital::{InputPin, OutputPin};
 use hal::spi::{Mode, Phase, Polarity};
 
-pub mod command;
 pub mod device;
-use device::{Registers, SpiCommand, XO_RCO_CONF1_PD_CLKDIV_REGMASK, XO_RCO_CONF0_REFDIV_REGMASK};
 
 /// SX127x SPI operating mode
 pub const MODE: Mode = Mode {
@@ -82,12 +80,10 @@ where
 
         SX127x.sdn.set_low();
 
-
-
         Ok(SX127x)
     }
 
-        /// Read data from a specified register address
+    /// Read data from a specified register address
     /// This consumes the provided input data array and returns a reference to this on success
     fn reg_read<'a>(&mut self, reg: Registers, data: &'a mut [u8]) -> Result<&'a [u8], E> {
         // Setup read command
@@ -143,7 +139,6 @@ where
 
         Ok(())
     }
-
 }
 
 #[cfg(test)]
