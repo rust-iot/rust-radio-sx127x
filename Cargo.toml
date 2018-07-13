@@ -4,7 +4,11 @@ version = "0.1.0"
 authors = ["Ryan Kurte <ryankurte@gmail.com>"]
 
 [dependencies]
-embedded-hal = { git="https://github.com/japaric/embedded-hal", feature="unproven" }
-futures = "0.2.1"
+embedded-hal = { git="https://github.com/japaric/embedded-hal", features=["unproven"] }
+futures = "0.1.22"
 nb = "0.1.1"
 radio = { path = "../rust-radio" }
+
+[build-dependencies]
+bindgen = "0.26.3"
+cc = "1.0"

@@ -85,7 +85,7 @@ where
 
     /// Read data from a specified register address
     /// This consumes the provided input data array and returns a reference to this on success
-    fn reg_read<'a>(&mut self, reg: Registers, data: &'a mut [u8]) -> Result<&'a [u8], E> {
+    fn reg_read<'a>(&mut self, reg: u8, data: &'a mut [u8]) -> Result<&'a [u8], E> {
         // Setup read command
         let out_buf: [u8; 1] = [reg as u8 & 0x7F];
         // Assert CS
@@ -113,7 +113,7 @@ where
     }
 
     /// Write data to a specified register address
-    pub fn reg_write(&mut self, reg: Registers, data: &[u8]) -> Result<(), E> {
+    pub fn reg_write(&mut self, reg: u8, data: &[u8]) -> Result<(), E> {
         // Setup write command
         let out_buf: [u8; 1] = [reg as u8 | 0x80];
         // Assert CS

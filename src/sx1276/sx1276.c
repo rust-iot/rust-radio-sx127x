@@ -14,10 +14,10 @@ Maintainer: Miguel Luis, Gregory Cristian and Wael Guibene
 */
 #include <math.h>
 #include <string.h>
-#include "board.h"
+//#include "board.h"
 #include "radio.h"
 #include "sx1276.h"
-#include "sx1276-board.h"
+//#include "sx1276-board.h"
 
 /*
  * Local types definition
