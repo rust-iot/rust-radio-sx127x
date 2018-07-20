@@ -1,8 +1,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef void * Gpio_t;
-typedef void * Spi_t;
+extern void DelayMs(uint32_t ms);
 
 #include "radio.h"
 #include "sx1276/sx1276.h"

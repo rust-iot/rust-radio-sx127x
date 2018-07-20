@@ -20,6 +20,7 @@ Maintainer: Miguel Luis and Gregory Cristian
 
 typedef void * Gpio_t;
 typedef void * Spi_t;
+typedef void *TimerEvent_t;
 
 /*!
  * Radio driver supported modems

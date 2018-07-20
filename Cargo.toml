@@ -8,6 +8,7 @@ embedded-hal = { git="https://github.com/japaric/embedded-hal", features=["unpro
 futures = "0.1.22"
 nb = "0.1.1"
 radio = { path = "../rust-radio" }
+libc = "0.2.42"
 
 [build-dependencies]
 bindgen = "0.26.3"
