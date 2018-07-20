@@ -67,6 +67,7 @@ where
         unsafe {
             let mut c = SX1276_s{settings: settings, 
                                 ctx: mem::uninitialized(),
+                                reset: Some(Self::ext_reset),
                                 write_buffer: Some(Self::write_buffer),
                                 read_buffer: Some(Self::read_buffer),
                                 delay_ms: Some(Self::delay_ms),
@@ -80,6 +81,7 @@ where
             sx127x.reset();
 
             // Calibrate RX chain
+            //sx1276::RxChainCalibration(&sx127x.c);
 
             // Init IRQs (..?)
 
@@ -89,6 +91,14 @@ where
 
 
             Ok(sx127x)
+        }
+    }
+
+     extern fn ext_reset(ctx: *mut libc::c_void) {
+        unsafe {
+            let sx1276 = ctx as *mut SX1276_s;
+            let sx127x = (*sx1276).ctx as *mut SX127x<SPI, OUTPUT, INPUT, DELAY>;
+            (*sx127x).reset();
         }
     }
 

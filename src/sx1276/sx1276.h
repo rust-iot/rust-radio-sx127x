@@ -141,9 +141,10 @@ typedef struct
 }RadioSettings_t;
 
 // Function prototypes
-typedef void DelayMs( void* sx1276, uint32_t ms );
-typedef void WriteBuffer( void* sx1276, uint8_t addr, uint8_t *buffer, uint8_t size );
-typedef void ReadBuffer( void* sx1276, uint8_t addr, uint8_t *buffer, uint8_t size );
+typedef void Reset( void* ctx );
+typedef void DelayMs( void* ctx, uint32_t ms );
+typedef void WriteBuffer( void* ctx, uint8_t addr, uint8_t *buffer, uint8_t size );
+typedef void ReadBuffer( void* ctx, uint8_t addr, uint8_t *buffer, uint8_t size );
 
 /*!
  * Radio hardware and global parameters
@@ -152,6 +153,7 @@ typedef struct SX1276_s
 {
     RadioSettings_t settings;
     void* ctx;
+    Reset *reset;
     DelayMs *delay_ms;
     WriteBuffer *write_buffer;
     ReadBuffer *read_buffer;
