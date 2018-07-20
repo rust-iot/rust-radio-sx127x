@@ -18,8 +18,6 @@ Maintainer: Miguel Luis and Gregory Cristian
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef void * Gpio_t;
-typedef void * Spi_t;
 typedef void *TimerEvent_t;
 
 /*!

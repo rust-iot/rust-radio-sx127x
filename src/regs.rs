@@ -1,3 +1,7 @@
+//! SX127x Radio Driver
+//! Copyright 2018 Ryan Kurte
+
+
 pub enum Common {
     FIFO = 0x00,
     // Common settings

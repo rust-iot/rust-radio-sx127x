@@ -1,4 +1,5 @@
-
+//! SX127x Radio Driver
+//! Copyright 2018 Ryan Kurte
 
 pub enum State {
     Idle = 0,
@@ -6,6 +7,47 @@ pub enum State {
     TxRunning = 2,
     RdCad = 3,
 }
+
+pub enum Modem {
+    FSK = 0,
+    LoRA = 1,
+}
+
+/// Receive configuration
+pub struct RxConfig {
+    modem: Modem,
+    bandwidth: u32,
+    datarate: u32,
+    coderate: u8,
+    bandwitdth_afc: u32,
+    preamble_len: u16,
+    symbol_timeout: u16,
+    fixed_len: bool,
+    payload_len: u8,
+    crc_on: bool,
+    freq_hop_on: bool,
+    hop_period: u8,
+    iq_inverted: bool,
+    rx_continuous: bool,
+}
+
+/// Transmit configuration
+pub struct TxConfig {
+    modem: Modem,
+    power: i8,
+    fdev: u32,
+    bandwidth: u32,
+    datarate: u32,
+    coderate: u8,
+    preamble_len: u16,
+    fixed_len: bool,
+    crc_on: bool,
+    freq_hop_on: bool,
+    hop_period: u8,
+    iq_inverted: bool,
+    timeout: u32,
+}
+
 
 pub const XTAL_FREQ     : u32 = 32000000;
 pub const FREQ_STEP     : f32 = 61.03515625;

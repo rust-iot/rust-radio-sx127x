@@ -9,7 +9,10 @@ extern crate futures;
 extern crate libc;
 extern crate nb;
 
-use hal::blocking::spi;
+use core::mem;
+use core::ptr;
+
+use hal::blocking::{spi, delay};
 use hal::digital::{InputPin, OutputPin};
 use hal::spi::{Mode, Phase, Polarity};
 
@@ -20,6 +23,8 @@ pub mod regs;
 pub mod sx1276;
 use sx1276::{SX1276_s};
 
+pub use sx1276::RadioSettings_t as Settings;
+
 /// SX127x SPI operating mode
 pub const MODE: Mode = Mode {
     polarity: Polarity::IdleLow,
@@ -27,29 +32,27 @@ pub const MODE: Mode = Mode {
 };
 
 /// SX127x device object
-pub struct SX127x<SPI, OUTPUT, INPUT> {
+#[repr(C)]
+pub struct SX127x<SPI, OUTPUT, INPUT, DELAY> {
     spi: SPI,
     sdn: OUTPUT,
     cs: OUTPUT,
     gpio: [Option<INPUT>; 4],
+    delay: DELAY,
     state: State,
     c: SX1276_s,
 }
 
-pub struct SPIHelper {
-    
-}
-
-
-extern fn SpiInOut() {
-
-}
-
-extern fn GpioWrite() {
-
-}
-
 extern fn DelayMs(ms: u32) {
+
+}
+extern fn SX1276Reset(sx1276: *mut SX1276_s) {
+
+}
+extern fn SX1276WriteBuffer(sx1276: *mut SX1276_s, addr: u8, buffer: *mut u8, size: u8) {
+
+}
+extern fn SX1276ReadBuffer(sx1276: *mut SX1276_s, addr: u8, buffer: *mut u8, size: u8) {
 
 }
 
@@ -63,68 +66,37 @@ impl <SPIError>From<SPIError> for Sx127xError<SPIError> {
 	}
 }
 
-pub enum Modem {
-    FSK = 0,
-    LoRA = 1,
-}
 
-/// Receive configuration
-pub struct RxConfig {
-    modem: Modem,
-    bandwidth: u32,
-    datarate: u32,
-    coderate: u8,
-    bandwitdth_afc: u32,
-    preamble_len: u16,
-    symbol_timeout: u16,
-    fixed_len: bool,
-    payload_len: u8,
-    crc_on: bool,
-    freq_hop_on: bool,
-    hop_period: u8,
-    iq_inverted: bool,
-    rx_continuous: bool,
-}
-
-/// Transmit configuration
-pub struct TxConfig {
-    modem: Modem,
-    power: i8,
-    fdev: u32,
-    bandwidth: u32,
-    datarate: u32,
-    coderate: u8,
-    preamble_len: u16,
-    fixed_len: bool,
-    crc_on: bool,
-    freq_hop_on: bool,
-    hop_period: u8,
-    iq_inverted: bool,
-    timeout: u32,
-}
-
-impl<E, SPI, OUTPUT, INPUT> SX127x<SPI, OUTPUT, INPUT>
+impl<E, SPI, OUTPUT, INPUT, DELAY> SX127x<SPI, OUTPUT, INPUT, DELAY>
 where
     SPI: spi::Transfer<u8, Error = E> + spi::Write<u8, Error = E>,
     OUTPUT: OutputPin,
     INPUT: InputPin,
+    DELAY: delay::DelayMs<usize>,
 {
-    pub fn new(spi: SPI, sdn: OUTPUT, cs: OUTPUT, gpio: [Option<INPUT>; 4]) -> Result<Self, Sx127xError<E>> {
-        let mut SX127x = SX127x { spi, sdn, cs, gpio, state: State::Idle, c: SX1276_s{} };
+    pub fn new(spi: SPI, sdn: OUTPUT, cs: OUTPUT, gpio: [Option<INPUT>; 4], delay: DELAY, settings: Settings) -> Result<Self, Sx127xError<E>> {
+        unsafe {
+            let mut sx127x = SX127x { spi, sdn, cs, gpio, delay, state: State::Idle, c: SX1276_s{settings: settings, ctx: mem::uninitialized()} };
+            let mut sx127x_pty = &sx127x as *mut SX127x<SPI, OUTPUT, INPUT, DELAY>;
+            sx127x.c.ctx = sx127x_pty as *mut libc::c_void;
 
-        // Reset IC
-        SX127x.sdn.set_low();
+            // Reset IC
+            sx127x.sdn.set_low();
+            sx127x.delay.delay_ms(1);
+            sx127x.sdn.set_high();
+            sx127x.delay.delay_ms(10);
 
-        // Calibrate RX chain
+            // Calibrate RX chain
 
-        // Init IRQs (..?)
+            // Init IRQs (..?)
 
-        // Confiure modem(s)
+            // Confiure modem(s)
 
-        // Set state to idle
-        SX127x.state = State::Idle;
+            // Set state to idle
+            sx127x.state = State::Idle;
 
-        Ok(SX127x)
+            Ok(sx127x)
+        }
     }
 
     /// Read data from a specified register address
