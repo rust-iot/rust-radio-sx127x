@@ -140,6 +140,11 @@ typedef struct
     RadioLoRaPacketHandler_t LoRaPacketHandler;
 }RadioSettings_t;
 
+// Function prototypes
+typedef void DelayMs( void* sx1276, uint32_t ms );
+typedef void WriteBuffer( void* sx1276, uint8_t addr, uint8_t *buffer, uint8_t size );
+typedef void ReadBuffer( void* sx1276, uint8_t addr, uint8_t *buffer, uint8_t size );
+
 /*!
  * Radio hardware and global parameters
  */
@@ -147,6 +152,9 @@ typedef struct SX1276_s
 {
     RadioSettings_t settings;
     void* ctx;
+    DelayMs *delay_ms;
+    WriteBuffer *write_buffer;
+    ReadBuffer *read_buffer;
 } SX1276_t;
 
 /*!

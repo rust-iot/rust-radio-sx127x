@@ -264,7 +264,7 @@ bool SX1276IsChannelFree( SX1276_t* sx1276, RadioModems_t modem, uint32_t freq, 
 
     SX1276SetOpMode( sx1276, RF_OPMODE_RECEIVER );
 
-    DelayMs( 1 );
+    sx1276->delay_ms( sx1276, 1 );
 
     rssi = SX1276ReadRssi( sx1276, modem );
 
@@ -303,7 +303,7 @@ uint32_t SX1276Random( SX1276_t* sx1276 )
 
     for( i = 0; i < 32; i++ )
     {
-        DelayMs( 1 );
+        sx1276->delay_ms( sx1276,  1 );
         // Unfiltered RSSI value reading. Only takes the LSB value
         rnd |= ( ( uint32_t ) SX1276Read( sx1276, REG_LR_RSSIWIDEBAND ) & 0x01 ) << i;
     }
@@ -872,7 +872,7 @@ void SX1276Send( SX1276_t* sx1276, uint8_t *buffer, uint8_t size )
             if( ( SX1276Read( sx1276, REG_OPMODE ) & ~RF_OPMODE_MASK ) == RF_OPMODE_SLEEP )
             {
                 SX1276SetStby( sx1276 );
-                DelayMs( 1 );
+                sx1276->delay_ms( sx1276,  1 );
             }
             // Write payload buffer
             SX1276WriteFifo( sx1276, buffer, size );
@@ -1247,24 +1247,24 @@ void SX1276SetModem( SX1276_t* sx1276, RadioModems_t modem )
 
 void SX1276Write( SX1276_t* sx1276, uint8_t addr, uint8_t data )
 {
-    SX1276WriteBuffer( sx1276, addr, &data, 1 );
+    sx1276->write_buffer( sx1276, addr, &data, 1 );
 }
 
 uint8_t SX1276Read( SX1276_t* sx1276, uint8_t addr )
 {
     uint8_t data;
-    SX1276ReadBuffer( sx1276, addr, &data, 1 );
+    sx1276->read_buffer( sx1276, addr, &data, 1 );
     return data;
 }
 
 void SX1276WriteFifo( SX1276_t* sx1276, uint8_t *buffer, uint8_t size )
 {
-    SX1276WriteBuffer( sx1276, 0, buffer, size );
+    sx1276->write_buffer( sx1276, 0, buffer, size );
 }
 
 void SX1276ReadFifo( SX1276_t* sx1276, uint8_t *buffer, uint8_t size )
 {
-    SX1276ReadBuffer( sx1276, 0, buffer, size );
+    sx1276->read_buffer( sx1276, 0, buffer, size );
 }
 
 void SX1276SetMaxPayloadLength( SX1276_t* sx1276, RadioModems_t modem, uint8_t max )

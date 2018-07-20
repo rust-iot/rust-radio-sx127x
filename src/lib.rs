@@ -9,8 +9,7 @@ extern crate futures;
 extern crate libc;
 extern crate nb;
 
-use core::mem;
-use core::ptr;
+use core::{mem, ptr, slice};
 
 use hal::blocking::{spi, delay};
 use hal::digital::{InputPin, OutputPin};
@@ -39,20 +38,10 @@ pub struct SX127x<SPI, OUTPUT, INPUT, DELAY> {
     cs: OUTPUT,
     gpio: [Option<INPUT>; 4],
     delay: DELAY,
-    state: State,
     c: SX1276_s,
 }
 
 extern fn DelayMs(ms: u32) {
-
-}
-extern fn SX1276Reset(sx1276: *mut SX1276_s) {
-
-}
-extern fn SX1276WriteBuffer(sx1276: *mut SX1276_s, addr: u8, buffer: *mut u8, size: u8) {
-
-}
-extern fn SX1276ReadBuffer(sx1276: *mut SX1276_s, addr: u8, buffer: *mut u8, size: u8) {
 
 }
 
@@ -76,15 +65,19 @@ where
 {
     pub fn new(spi: SPI, sdn: OUTPUT, cs: OUTPUT, gpio: [Option<INPUT>; 4], delay: DELAY, settings: Settings) -> Result<Self, Sx127xError<E>> {
         unsafe {
-            let mut sx127x = SX127x { spi, sdn, cs, gpio, delay, state: State::Idle, c: SX1276_s{settings: settings, ctx: mem::uninitialized()} };
-            let mut sx127x_pty = &sx127x as *mut SX127x<SPI, OUTPUT, INPUT, DELAY>;
-            sx127x.c.ctx = sx127x_pty as *mut libc::c_void;
+            let mut c = SX1276_s{settings: settings, 
+                                ctx: mem::uninitialized(),
+                                write_buffer: Some(Self::write_buffer),
+                                read_buffer: Some(Self::read_buffer),
+                                delay_ms: Some(Self::delay_ms),
+                                };
+
+            let mut sx127x = SX127x { spi, sdn, cs, gpio, delay, c: c };
+            
+            sx127x.c.ctx = &mut sx127x as *mut SX127x<SPI, OUTPUT, INPUT, DELAY> as *mut libc::c_void;
 
             // Reset IC
-            sx127x.sdn.set_low();
-            sx127x.delay.delay_ms(1);
-            sx127x.sdn.set_high();
-            sx127x.delay.delay_ms(10);
+            sx127x.reset();
 
             // Calibrate RX chain
 
@@ -93,10 +86,51 @@ where
             // Confiure modem(s)
 
             // Set state to idle
-            sx127x.state = State::Idle;
+
 
             Ok(sx127x)
         }
+    }
+
+    extern fn write_buffer(ctx: *mut libc::c_void, addr: u8, buffer: *mut u8, size: u8) {
+        unsafe {
+            let sx1276 = ctx as *mut SX1276_s;
+            let sx127x = (*sx1276).ctx as *mut SX127x<SPI, OUTPUT, INPUT, DELAY>;
+            let data: &[u8] = slice::from_raw_parts(buffer, size as usize);
+            (*sx127x).reg_write(addr, data);
+        }
+    }
+    
+    extern fn read_buffer(ctx: *mut libc::c_void, addr: u8, buffer: *mut u8, size: u8) {
+        unsafe {
+            let sx1276 = ctx as *mut SX1276_s;
+            let sx127x = (*sx1276).ctx as *mut SX127x<SPI, OUTPUT, INPUT, DELAY>;
+            let data: &mut [u8] = slice::from_raw_parts_mut(buffer, size as usize);
+            (*sx127x).reg_read(addr, data);
+        }
+    }
+
+    extern fn delay_ms(ctx: *mut libc::c_void, ms: u32) {
+        unsafe {
+            let sx1276 = ctx as *mut SX1276_s;
+            let sx127x = (*sx1276).ctx as *mut SX127x<SPI, OUTPUT, INPUT, DELAY>;
+            (*sx127x).delay.delay_ms(ms as usize);
+        }
+    }
+
+    fn from_c<'a>(sx1276: * mut SX1276_s) -> *mut Self {
+        unsafe {
+            let sx127x_ptr = (*sx1276).ctx as *mut libc::c_void;
+            let sx127x = sx127x_ptr as *mut SX127x<SPI, OUTPUT, INPUT, DELAY>;
+            sx127x
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.sdn.set_low();
+        self.delay.delay_ms(1);
+        self.sdn.set_high();
+        self.delay.delay_ms(10);
     }
 
     /// Read data from a specified register address
