@@ -1,5 +1,6 @@
 [package]
-name = "radio-sx1726"
+name = "radio-sx127x"
+description = "Rust driver for the Semtec SX127x Sub GHZ LoRa Radio ICs"
 version = "0.1.0"
 authors = ["Ryan Kurte <ryankurte@gmail.com>"]
 
