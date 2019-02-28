@@ -1,9 +1,8 @@
-//! SX127x Radio Driver
+//! Sx127x Radio Driver
 //! Copyright 2018 Ryan Kurte
 
 #![no_std]
-#![feature(never_type)]
-#![feature(unproven)]
+
 extern crate embedded_hal as hal;
 extern crate futures;
 extern crate libc;
@@ -24,20 +23,20 @@ use sx1276::{SX1276_s};
 
 pub use sx1276::RadioSettings_t as Settings;
 
-/// SX127x SPI operating mode
+/// Sx127x Spi operating mode
 pub const MODE: Mode = Mode {
     polarity: Polarity::IdleLow,
     phase: Phase::CaptureOnFirstTransition,
 };
 
-/// SX127x device object
+/// Sx127x device object
 #[repr(C)]
-pub struct SX127x<SPI, OUTPUT, INPUT, DELAY> {
-    spi: SPI,
-    sdn: OUTPUT,
-    cs: OUTPUT,
-    gpio: [Option<INPUT>; 4],
-    delay: DELAY,
+pub struct Sx127x<Spi, Output, Input, Delay> {
+    spi: Spi,
+    sdn: Output,
+    cs: Output,
+    gpio: [Option<Input>; 4],
+    delay: Delay,
     c: SX1276_s,
 }
 
@@ -45,25 +44,25 @@ extern fn DelayMs(ms: u32) {
 
 }
 
-pub enum Sx127xError<SPIError> {
-    SPI(SPIError)
+pub enum Sx127xError<SpiError> {
+    Spi(SpiError)
 }
 
-impl <SPIError>From<SPIError> for Sx127xError<SPIError> {
-	fn from(e: SPIError) -> Sx127xError<SPIError> {
-		Sx127xError::SPI(e)
+impl <SpiError>From<SpiError> for Sx127xError<SpiError> {
+	fn from(e: SpiError) -> Sx127xError<SpiError> {
+		Sx127xError::Spi(e)
 	}
 }
 
 
-impl<E, SPI, OUTPUT, INPUT, DELAY> SX127x<SPI, OUTPUT, INPUT, DELAY>
+impl<E, Spi, Output, Input, Delay> Sx127x<Spi, Output, Input, Delay>
 where
-    SPI: spi::Transfer<u8, Error = E> + spi::Write<u8, Error = E>,
-    OUTPUT: OutputPin,
-    INPUT: InputPin,
-    DELAY: delay::DelayMs<usize>,
+    Spi: spi::Transfer<u8, Error = E> + spi::Write<u8, Error = E>,
+    Output: OutputPin,
+    Input: InputPin,
+    Delay: delay::DelayMs<usize>,
 {
-    pub fn new(spi: SPI, sdn: OUTPUT, cs: OUTPUT, gpio: [Option<INPUT>; 4], delay: DELAY, settings: Settings) -> Result<Self, Sx127xError<E>> {
+    pub fn new(spi: Spi, sdn: Output, cs: Output, gpio: [Option<Input>; 4], delay: Delay, settings: Settings) -> Result<Self, Sx127xError<E>> {
         unsafe {
             let mut c = SX1276_s{settings: settings, 
                                 ctx: mem::uninitialized(),
@@ -73,9 +72,9 @@ where
                                 delay_ms: Some(Self::delay_ms),
                                 };
 
-            let mut sx127x = SX127x { spi, sdn, cs, gpio, delay, c: c };
+            let mut sx127x = Sx127x { spi, sdn, cs, gpio, delay, c: c };
             
-            sx127x.c.ctx = &mut sx127x as *mut SX127x<SPI, OUTPUT, INPUT, DELAY> as *mut libc::c_void;
+            sx127x.c.ctx = &mut sx127x as *mut Sx127x<Spi, Output, Input, Delay> as *mut libc::c_void;
 
             // Reset IC
             sx127x.reset();
@@ -97,7 +96,7 @@ where
      extern fn ext_reset(ctx: *mut libc::c_void) {
         unsafe {
             let sx1276 = ctx as *mut SX1276_s;
-            let sx127x = (*sx1276).ctx as *mut SX127x<SPI, OUTPUT, INPUT, DELAY>;
+            let sx127x = (*sx1276).ctx as *mut Sx127x<Spi, Output, Input, Delay>;
             (*sx127x).reset();
         }
     }
@@ -105,7 +104,7 @@ where
     extern fn write_buffer(ctx: *mut libc::c_void, addr: u8, buffer: *mut u8, size: u8) {
         unsafe {
             let sx1276 = ctx as *mut SX1276_s;
-            let sx127x = (*sx1276).ctx as *mut SX127x<SPI, OUTPUT, INPUT, DELAY>;
+            let sx127x = (*sx1276).ctx as *mut Sx127x<Spi, Output, Input, Delay>;
             let data: &[u8] = slice::from_raw_parts(buffer, size as usize);
             (*sx127x).reg_write(addr, data);
         }
@@ -114,7 +113,7 @@ where
     extern fn read_buffer(ctx: *mut libc::c_void, addr: u8, buffer: *mut u8, size: u8) {
         unsafe {
             let sx1276 = ctx as *mut SX1276_s;
-            let sx127x = (*sx1276).ctx as *mut SX127x<SPI, OUTPUT, INPUT, DELAY>;
+            let sx127x = (*sx1276).ctx as *mut Sx127x<Spi, Output, Input, Delay>;
             let data: &mut [u8] = slice::from_raw_parts_mut(buffer, size as usize);
             (*sx127x).reg_read(addr, data);
         }
@@ -123,7 +122,7 @@ where
     extern fn delay_ms(ctx: *mut libc::c_void, ms: u32) {
         unsafe {
             let sx1276 = ctx as *mut SX1276_s;
-            let sx127x = (*sx1276).ctx as *mut SX127x<SPI, OUTPUT, INPUT, DELAY>;
+            let sx127x = (*sx1276).ctx as *mut Sx127x<Spi, Output, Input, Delay>;
             (*sx127x).delay.delay_ms(ms as usize);
         }
     }
@@ -131,7 +130,7 @@ where
     fn from_c<'a>(sx1276: * mut SX1276_s) -> *mut Self {
         unsafe {
             let sx127x_ptr = (*sx1276).ctx as *mut libc::c_void;
-            let sx127x = sx127x_ptr as *mut SX127x<SPI, OUTPUT, INPUT, DELAY>;
+            let sx127x = sx127x_ptr as *mut Sx127x<Spi, Output, Input, Delay>;
             sx127x
         }
     }
@@ -155,7 +154,7 @@ where
             Ok(_r) => (),
             Err(e) => {
                 self.cs.set_high();
-                return Err(Sx127xError::SPI(e));
+                return Err(Sx127xError::Spi(e));
             }
         };
         // Transfer data
@@ -163,7 +162,7 @@ where
             Ok(r) => r,
             Err(e) => {
                 self.cs.set_high();
-                return Err(Sx127xError::SPI(e));
+                return Err(Sx127xError::Spi(e));
             }
         };
         // Clear CS
@@ -183,7 +182,7 @@ where
             Ok(_r) => (),
             Err(e) => {
                 self.cs.set_high();
-                return Err(Sx127xError::SPI(e));
+                return Err(Sx127xError::Spi(e));
             }
         };
         // Transfer data
@@ -191,7 +190,7 @@ where
             Ok(_r) => (),
             Err(e) => {
                 self.cs.set_high();
-                return Err(Sx127xError::SPI(e));
+                return Err(Sx127xError::Spi(e));
             }
         };
         // Clear CS
