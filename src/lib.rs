@@ -3,25 +3,34 @@
 
 #![no_std]
 
-extern crate embedded_hal as hal;
-extern crate futures;
 extern crate libc;
-extern crate nb;
+extern crate log;
 
-use core::{mem, ptr, slice};
+use core::convert::TryFrom;
 
-use hal::blocking::{spi, delay};
-use hal::digital::{InputPin, OutputPin};
+extern crate embedded_hal as hal;
+use hal::blocking::{delay};
+use hal::digital::v2::{InputPin, OutputPin};
 use hal::spi::{Mode, Phase, Polarity};
+use hal::blocking::spi::{Transfer, Write};
+
+extern crate embedded_spi;
+use embedded_spi::{Error as WrapError, wrapper::Wrapper as SpiWrapper};
+
+pub mod bindings;
+
+#[cfg(feature = "ffi")]
+use bindings::{SX1276_t};
+
+pub mod base;
+
+#[cfg(feature = "ffi")]
+pub mod ffi;
+
 
 pub mod device;
 use device::{State};
 pub mod regs;
-
-pub mod sx1276;
-use sx1276::{SX1276_s};
-
-pub use sx1276::RadioSettings_t as Settings;
 
 /// Sx127x Spi operating mode
 pub const MODE: Mode = Mode {
@@ -30,173 +39,126 @@ pub const MODE: Mode = Mode {
 };
 
 /// Sx127x device object
-#[repr(C)]
-pub struct Sx127x<Spi, Output, Input, Delay> {
-    spi: Spi,
-    sdn: Output,
-    cs: Output,
-    gpio: [Option<Input>; 4],
+pub struct Sx127x<Hal, CommsError, OutputPin, InputPin, PinError, Delay>{
+    hal: Hal,
+
     delay: Delay,
-    c: SX1276_s,
-}
 
-extern fn DelayMs(ms: u32) {
+    sdn: OutputPin,
 
-}
+    _dio: [Option<InputPin>; 3],
 
-pub enum Sx127xError<SpiError> {
-    Spi(SpiError)
-}
+    #[cfg(feature = "ffi")]
+    c: Option<SX1276_t>,
 
-impl <SpiError>From<SpiError> for Sx127xError<SpiError> {
-	fn from(e: SpiError) -> Sx127xError<SpiError> {
-		Sx127xError::Spi(e)
-	}
+    #[cfg(feature = "ffi")]
+    err: Option<Sx127xError<CommsError, PinError>>,
 }
 
 
-impl<E, Spi, Output, Input, Delay> Sx127x<Spi, Output, Input, Delay>
+pub struct Settings {
+
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self{}
+    }
+}
+
+/// Sx127x error type
+#[derive(Debug, Clone, PartialEq)]
+pub enum Sx127xError<CommsError, PinError> {
+    /// Communications (SPI or UART) error
+    Comms(CommsError),
+    /// Pin control error
+    Pin(PinError),
+    /// Transaction aborted
+    Aborted,
+    /// Invalid response from device
+    InvalidResponse,
+}
+
+impl <CommsError, PinError> From<WrapError<CommsError, PinError>> for Sx127xError<CommsError, PinError> {
+    fn from(e: WrapError<CommsError, PinError>) -> Self {
+        match e {
+            WrapError::Spi(e) => Sx127xError::Comms(e),
+            WrapError::Pin(e) => Sx127xError::Pin(e),
+            WrapError::Aborted => Sx127xError::Aborted,
+        }
+    }
+}
+
+impl<Spi, CommsError, Output, Input, PinError, Delay> Sx127x<SpiWrapper<Spi, CommsError, Output, Input, PinError>, CommsError, Output, Input, PinError, Delay>
 where
-    Spi: spi::Transfer<u8, Error = E> + spi::Write<u8, Error = E>,
-    Output: OutputPin,
-    Input: InputPin,
-    Delay: delay::DelayMs<usize>,
+    Spi: Transfer<u8, Error = CommsError> + Write<u8, Error = CommsError>,
+    Output: OutputPin<Error = PinError>,
+    Input: InputPin<Error = PinError>,
+    Delay: delay::DelayMs<u32>,
 {
-    pub fn new(spi: Spi, sdn: Output, cs: Output, gpio: [Option<Input>; 4], delay: Delay, settings: Settings) -> Result<Self, Sx127xError<E>> {
-        unsafe {
-            let mut c = SX1276_s{settings: settings, 
-                                ctx: mem::uninitialized(),
-                                reset: Some(Self::ext_reset),
-                                write_buffer: Some(Self::write_buffer),
-                                read_buffer: Some(Self::read_buffer),
-                                delay_ms: Some(Self::delay_ms),
-                                };
-
-            let mut sx127x = Sx127x { spi, sdn, cs, gpio, delay, c: c };
-            
-            sx127x.c.ctx = &mut sx127x as *mut Sx127x<Spi, Output, Input, Delay> as *mut libc::c_void;
-
-            // Reset IC
-            sx127x.reset();
-
-            // Calibrate RX chain
-            //sx1276::RxChainCalibration(&sx127x.c);
-
-            // Init IRQs (..?)
-
-            // Confiure modem(s)
-
-            // Set state to idle
+    /// Create an Sx127x with the provided `Spi` implementation and pins
+    pub fn spi(spi: Spi, cs: Output, busy: Input, sdn: Output, delay: Delay, settings: Settings) -> Result<Self, Sx127xError<CommsError, PinError>> {
+        // Create SpiWrapper over spi/cs/busy
+        let mut hal = SpiWrapper::new(spi, cs);
+        hal.with_busy(busy);
+        // Create instance with new hal
+        Self::new(hal, sdn, delay, settings)
+    }
+}
 
 
-            Ok(sx127x)
+
+impl<Hal, CommsError, Output, Input, PinError, Delay> Sx127x<Hal, CommsError, Output, Input, PinError, Delay>
+where
+    Hal: base::Hal<CommsError, PinError>,
+    Output: OutputPin<Error = PinError>,
+    Input: InputPin<Error = PinError>,
+    Delay: delay::DelayMs<u32>,
+{
+    pub fn new(hal: Hal, sdn: Output, delay: Delay, settings: Settings) -> Result<Self, Sx127xError<CommsError, PinError>> {
+        // Build container object
+        let mut sx127x = Self::build(hal, sdn, delay, settings);
+
+        // Reset IC
+        sx127x.reset()?;
+
+        // Calibrate RX chain
+        //sx1276::RxChainCalibration(&sx127x.c);
+
+        // Init IRQs (..?)
+
+        // Confiure modem(s)
+
+        // Set state to idle
+
+
+        Ok(sx127x)
+    }
+
+    pub(crate) fn build(hal: Hal, sdn: Output, delay: Delay, _settings: Settings) -> Self {
+        Sx127x { 
+            hal, sdn, delay, 
+            _dio: [None, None, None],
+            #[cfg(feature = "ffi")]
+            c: None, 
+            #[cfg(feature = "ffi")]
+            err: None,
         }
     }
 
-     extern fn ext_reset(ctx: *mut libc::c_void) {
-        unsafe {
-            let sx1276 = ctx as *mut SX1276_s;
-            let sx127x = (*sx1276).ctx as *mut Sx127x<Spi, Output, Input, Delay>;
-            (*sx127x).reset();
-        }
+    /// Fetch device silicon version
+    pub fn silicon_version(&mut self) -> Result<u8, Sx127xError<CommsError, PinError>> {
+        let mut data = [0u8; 1];
+        self.hal.reg_read(regs::Common::VERSION as u16, &mut data)?;
+        Ok(data[0])
     }
 
-    extern fn write_buffer(ctx: *mut libc::c_void, addr: u8, buffer: *mut u8, size: u8) {
-        unsafe {
-            let sx1276 = ctx as *mut SX1276_s;
-            let sx127x = (*sx1276).ctx as *mut Sx127x<Spi, Output, Input, Delay>;
-            let data: &[u8] = slice::from_raw_parts(buffer, size as usize);
-            (*sx127x).reg_write(addr, data);
-        }
-    }
-    
-    extern fn read_buffer(ctx: *mut libc::c_void, addr: u8, buffer: *mut u8, size: u8) {
-        unsafe {
-            let sx1276 = ctx as *mut SX1276_s;
-            let sx127x = (*sx1276).ctx as *mut Sx127x<Spi, Output, Input, Delay>;
-            let data: &mut [u8] = slice::from_raw_parts_mut(buffer, size as usize);
-            (*sx127x).reg_read(addr, data);
-        }
-    }
-
-    extern fn delay_ms(ctx: *mut libc::c_void, ms: u32) {
-        unsafe {
-            let sx1276 = ctx as *mut SX1276_s;
-            let sx127x = (*sx1276).ctx as *mut Sx127x<Spi, Output, Input, Delay>;
-            (*sx127x).delay.delay_ms(ms as usize);
-        }
-    }
-
-    fn from_c<'a>(sx1276: * mut SX1276_s) -> *mut Self {
-        unsafe {
-            let sx127x_ptr = (*sx1276).ctx as *mut libc::c_void;
-            let sx127x = sx127x_ptr as *mut Sx127x<Spi, Output, Input, Delay>;
-            sx127x
-        }
-    }
-
-    pub fn reset(&mut self) {
-        self.sdn.set_low();
-        self.delay.delay_ms(1);
-        self.sdn.set_high();
-        self.delay.delay_ms(10);
-    }
-
-    /// Read data from a specified register address
-    /// This consumes the provided input data array and returns a reference to this on success
-    fn reg_read<'a>(&mut self, reg: u8, data: &'a mut [u8]) -> Result<&'a [u8], Sx127xError<E>> {
-        // Setup read command
-        let out_buf: [u8; 1] = [reg as u8 & 0x7F];
-        // Assert CS
-        self.cs.set_low();
-        // Write command
-        match self.spi.write(&out_buf) {
-            Ok(_r) => (),
-            Err(e) => {
-                self.cs.set_high();
-                return Err(Sx127xError::Spi(e));
-            }
-        };
-        // Transfer data
-        let res = match self.spi.transfer(data) {
-            Ok(r) => r,
-            Err(e) => {
-                self.cs.set_high();
-                return Err(Sx127xError::Spi(e));
-            }
-        };
-        // Clear CS
-        self.cs.set_high();
-        // Return result (contains returned data)
-        Ok(res)
-    }
-
-    /// Write data to a specified register address
-    pub fn reg_write(&mut self, reg: u8, data: &[u8]) -> Result<(), Sx127xError<E>> {
-        // Setup write command
-        let out_buf: [u8; 1] = [reg as u8 | 0x80];
-        // Assert CS
-        self.cs.set_low();
-        // Write command
-        match self.spi.write(&out_buf) {
-            Ok(_r) => (),
-            Err(e) => {
-                self.cs.set_high();
-                return Err(Sx127xError::Spi(e));
-            }
-        };
-        // Transfer data
-        match self.spi.write(&data) {
-            Ok(_r) => (),
-            Err(e) => {
-                self.cs.set_high();
-                return Err(Sx127xError::Spi(e));
-            }
-        };
-        // Clear CS
-        self.cs.set_high();
-
-        Ok(())
+    /// Fetch device state
+    pub fn get_state(&mut self) -> Result<State, Sx127xError<CommsError, PinError>> {
+        let mut data = [0u8; 1];
+        self.hal.reg_read(regs::Common::OPMODE as u16, &mut data)?;
+        let state = State::try_from(data[0]).map_err(|_| Sx127xError::InvalidResponse)?;
+        Ok(state)
     }
 
     // Calculate a channel number from a given frequency
@@ -205,14 +167,14 @@ where
     }
 
     // Set the channel
-    pub fn set_channel(&mut self, channel: u32) -> Result<(), Sx127xError<E>> {
-        self.reg_write(regs::Common::FRFMSB as u8, &[(channel >> 16) as u8])?;
-        self.reg_write(regs::Common::FRFMID as u8, &[(channel >> 8) as u8])?;
-        self.reg_write(regs::Common::FRFLSB as u8, &[(channel >> 0) as u8])?;
+    pub fn set_channel(&mut self, channel: u32) -> Result<(), Sx127xError<CommsError, PinError>> {
+        self.hal.reg_write(regs::Common::FRFMSB as u16, &[(channel >> 16) as u8])?;
+        self.hal.reg_write(regs::Common::FRFMID as u16, &[(channel >> 8) as u8])?;
+        self.hal.reg_write(regs::Common::FRFLSB as u16, &[(channel >> 0) as u8])?;
         Ok(())
     }
 
-    pub fn channel_clear(&mut self) -> Result<bool, Sx127xError<E>> {
+    pub fn channel_clear(&mut self) -> Result<bool, Sx127xError<CommsError, PinError>> {
         Ok(true)
     }
 }

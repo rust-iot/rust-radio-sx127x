@@ -1,11 +1,37 @@
 //! SX127x Radio Driver
 //! Copyright 2018 Ryan Kurte
 
+#![allow(unused)]
+
+use core::convert::TryFrom;
+
+
+const STATE_MASK: u8 = 0b111;
+
+/// Sx127x radio state enumeration
 pub enum State {
-    Idle = 0,
-    RxRunning = 1,
-    TxRunning = 2,
-    RdCad = 3,
+    Sleep       = 0b000,
+    Standby     = 0b001,
+    FsTx        = 0b010,
+    Tx          = 0b011,
+    FsRx        = 0b100,
+    Rx          = 0b101,
+}
+
+impl TryFrom<u8> for State {
+    type Error = ();
+
+    fn try_from(v: u8) -> Result<Self, ()> {
+        match v {
+            v if v == State::Sleep as u8      => Ok(State::Sleep),
+            v if v == State::Standby as u8    => Ok(State::Standby),
+            v if v == State::FsTx as u8       => Ok(State::FsTx),
+            v if v == State::Tx as u8         => Ok(State::Tx),
+            v if v == State::FsRx as u8       => Ok(State::FsRx),
+            v if v == State::Rx as u8         => Ok(State::Rx),
+            _ => Err(())
+        }
+    }
 }
 
 pub enum Modem {

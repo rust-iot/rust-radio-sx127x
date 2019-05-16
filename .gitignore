@@ -2,3 +2,5 @@
 **/*.rs.bk
 Cargo.lock
 src/sx1276/mod.rs
+libsx127x/
+.vscode/

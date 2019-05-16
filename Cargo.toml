@@ -4,13 +4,37 @@ description = "Rust driver for the Semtec SX127x Sub GHZ LoRa Radio ICs"
 version = "0.1.0"
 authors = ["Ryan Kurte <ryankurte@gmail.com>"]
 
+[features]
+ffi = [ "cc", "git2" ]
+util = [ "structopt", "linux-embedded-hal", "log", "simplelog" ] 
+default = [ "ffi", "util" ]
+
 [dependencies]
-embedded-hal = { git="https://github.com/japaric/embedded-hal", features=["unproven"] }
-futures = "0.1.22"
-nb = "0.1.1"
-radio = { path = "../rust-radio" }
 libc = "0.2.42"
+embedded-hal = { version = "0.2.3", features = ["unproven"] }
+embedded-spi = "0.4.0"
+#radio = { path = "../rust-radio" }
+
+structopt = { version = "0.2.15", optional = true }
+linux-embedded-hal = { version = "0.2.2", optional = true }
+simplelog = { version = "0.5.3", optional = true }
+log = { version = "0.4.6", optional = true }
+
 
 [build-dependencies]
-bindgen = "0.26.3"
-cc = "1.0"
+bindgen = "0.47.0"
+cc = { version = "1.0", optional = true }
+git2 = { version = "0.8.0", optional = true }
+
+[dev-dependencies]
+color-backtrace = "0.1.3"
+
+[[bin]]
+name = "sx127x-util"
+path = "src/util/main.rs"
+required-features = ["util"]
+
+[patch.crates-io]
+#embedded-hal =  { path = "../embedded-hal" }
+#embedded-hal-mock = { path = "../embedded-hal-mock" }
+embedded-spi = { path = "../rust-embedded-spi" }
