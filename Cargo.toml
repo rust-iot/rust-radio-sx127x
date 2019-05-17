@@ -12,7 +12,7 @@ default = [ "ffi", "util" ]
 [dependencies]
 libc = "0.2.42"
 embedded-hal = { version = "0.2.3", features = ["unproven"] }
-embedded-spi = "0.4.0"
+embedded-spi = "0.5.0"
 #radio = { path = "../rust-radio" }
 
 structopt = { version = "0.2.15", optional = true }
@@ -37,4 +37,4 @@ required-features = ["util"]
 [patch.crates-io]
 #embedded-hal =  { path = "../embedded-hal" }
 #embedded-hal-mock = { path = "../embedded-hal-mock" }
-embedded-spi = { path = "../rust-embedded-spi" }
+#embedded-spi = { path = "../rust-embedded-spi" }

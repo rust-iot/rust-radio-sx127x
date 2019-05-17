@@ -106,6 +106,7 @@ fn main() {
         .file(format!("{}/lib/sx1276.c", &repo_path.to_str().unwrap()))
         .include(format!("{}/lib", &repo_path.to_str().unwrap()))
         .debug(true)
+        .flag("-std=c11")
         .flag("-Wno-unused-parameter")
         .flag("-Wno-int-conversion")
         .flag("-Wno-implicit-function-declaration")
@@ -114,4 +115,5 @@ fn main() {
 
     // Link the library
     println!("cargo:rustc-link-lib=sx1280");
+    println!("cargo:rerun-if-changed={}", &repo_path.to_str().unwrap());
 }
