@@ -8,7 +8,7 @@ This currently uses [libsx127x](https://github.com/ryankurte/libsx127x) via FFI 
 ## Status
 
 [![GitHub tag](https://img.shields.io/github/tag/ryankurte/rust-radio-sx127x.svg)](https://github.com/ryankurte/rust-radio-sx127x)
-[![Travis CI Build Status](https://travis-ci.com/ryankurte/rust-radio-sx127x.svg?branch=master)](https://travis-ci.com/ryankurte/rust-radio-sx127x)
+[![Travis CI Build Status](https://travis-ci.com/ryankurte/rust-radio-sx127x.svg?token=s4CML2iJ2hd54vvqz5FP&branch=master)](https://travis-ci.com/ryankurte/rust-radio-sx127x)
 [![BuildKite Build Status](https://badge.buildkite.com/e104ee3bdc9521bc3cd74ab1de43f984bab5da1327549c35e8.svg)](https://buildkite.com/ryankurte/rust-radio-sx127x)
 [![Crates.io](https://img.shields.io/crates/v/radio-sx127x.svg)](https://crates.io/crates/radio-sx127x)
 [![Docs.rs](https://docs.rs/radio-sx127x/badge.svg)](https://docs.rs/radio-sx127x)
