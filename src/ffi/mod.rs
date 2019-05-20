@@ -11,18 +11,18 @@ use crate::{Sx127x, Sx127xError};
 use crate::bindings::{self as sx127x, SX1276_s};
 
 // Mark Sx127x object as cursed to forever wander the lands of ffi
-impl <Conn, ConnError, Output, Input, PinError, Delay> Cursed for Sx127x <Conn, ConnError, Output, Input, PinError, Delay> {}
+impl <Conn, CommsError, Output, Input, PinError, Delay> Cursed for Sx127x <Conn, CommsError, Output, Input, PinError, Delay> {}
 
 
-impl<T, ConnError, Output, Input, PinError, Delay> Sx127x<T, ConnError, Output, Input, PinError, Delay>
+impl<T, CommsError, Output, Input, PinError, Delay> Sx127x<T, CommsError, Output, Input, PinError, Delay>
 where
-    T: Transactional<Error = WrapError<ConnError, PinError>>,
+    T: Transactional<Error = WrapError<CommsError, PinError>>,
 
     Output: OutputPin<Error = PinError>,
     Input: InputPin<Error = PinError>,
 
     Delay: delay::DelayMs<u32>,
-    ConnError: core::fmt::Debug,
+    CommsError: core::fmt::Debug,
     PinError: core::fmt::Debug,
 {
     /// Create and bind an internal C object to support the bound C api
@@ -127,9 +127,9 @@ where
 
 }
 
-impl<T, ConnError, Output, Input, PinError, Delay> Sx127x<T, ConnError, Output, Input, PinError, Delay>
+impl<T, CommsError, Output, Input, PinError, Delay> Sx127x<T, CommsError, Output, Input, PinError, Delay>
 where
-    T: Transactional<Error = WrapError<ConnError, PinError>>,
+    T: Transactional<Error = WrapError<CommsError, PinError>>,
 
     Output: OutputPin<Error = PinError>,
     Input: InputPin<Error = PinError>,
@@ -137,12 +137,18 @@ where
 {
 
     /// Read status register using FFI bound method
-    pub fn ffi_status(&mut self) -> Result<sx127x::RadioState_t, Sx127xError<ConnError, PinError>> {
-        // Update rust object pointer to c object context
+    pub fn ffi_status(&mut self) -> Result<sx127x::RadioState_t, Sx127xError<CommsError, PinError>> {
         let mut ctx = self.c.unwrap();
-
         let status = unsafe { sx127x::SX1276GetStatus(&mut ctx) };
         Ok(status)
+    }
+
+    pub fn ffi_rx_chain_calibration(&mut self) -> Result<(), Sx127xError<CommsError, PinError>> {
+        let mut ctx = self.c.unwrap();
+
+        //unsafe { sx127x::RxChainCalibration(&mut ctx) };
+
+        Ok(())
     }
 
 }

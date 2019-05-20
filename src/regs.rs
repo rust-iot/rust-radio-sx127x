@@ -1,7 +1,42 @@
 //! SX127x Radio Driver
 //! Copyright 2018 Ryan Kurte
 
+#[derive(Clone, PartialEq, Debug)]
+pub enum Register {
+    Common(Common),
+    Fsk(Fsk),
+    LoRa(LoRa),
+}
 
+impl Into<u8> for Register {
+    fn into(self) -> u8 {
+        match self {
+            Register::Common(c) => c as u8,
+            Register::Fsk(f) => f as u8,
+            Register::LoRa(l) => l as u8,
+        }
+    }
+}
+
+impl Into<u8> for Common {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
+
+impl Into<u8> for LoRa {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
+
+impl Into<u8> for Fsk {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Common {
     FIFO = 0x00,
     // Common settings
@@ -33,6 +68,7 @@ pub enum Common {
     PLL = 0x70,
 }
 
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum LoRa {
     // LoRa registers
     FIFOADDRPTR = 0x0D,
@@ -76,7 +112,10 @@ pub enum LoRa {
     INVERTIQ2 = 0x3B,
 }
 
-pub enum FSK {
+
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum Fsk {
     BITRATEMSB = 0x02,
     BITRATELSB = 0x03,
     FDEVMSB = 0x04,

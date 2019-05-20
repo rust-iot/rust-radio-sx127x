@@ -6,7 +6,7 @@
 use core::convert::TryFrom;
 
 
-const STATE_MASK: u8 = 0b111;
+pub const OPMODE_STATE_MASK: u8 = 0b0000_0111;
 
 /// Sx127x radio state enumeration
 pub enum State {
@@ -16,6 +16,29 @@ pub enum State {
     Tx          = 0b011,
     FsRx        = 0b100,
     Rx          = 0b101,
+}
+
+pub const OPMODE_SHAPING_MASK: u8 = 0b0001_1000;
+
+pub enum Shaping {
+    Shaping00 = 0x00,
+    Shaping01 = 0x08,
+    Shaping10 = 0x10,
+    Shaping11 = 0x18,
+}
+
+pub const OPMODE_MODULATION_MASK: u8 = 0b0010_0000;
+
+pub enum Modulation {
+    Fsk = 0x00,
+    Ook = 0x20,
+}
+
+pub const OPMODE_LONGRANGEMODE_MASK: u8 = 0b1000_0000;
+
+pub enum LongRangeMode {
+    Off = 0x00,
+    On = 0x80,
 }
 
 impl TryFrom<u8> for State {
@@ -139,4 +162,18 @@ pub mod fsk {
         Receiver = 0x05,
     }
 
+}
+
+pub mod lora {
+    pub struct Config {
+
+    }
+
+    impl Default for Config {
+        fn default() -> Self {
+            Config{
+
+            }
+        }
+    }
 }

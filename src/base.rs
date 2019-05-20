@@ -14,9 +14,9 @@ pub trait Hal<CommsError, PinError> {
     fn wait_busy(&mut self) -> Result<(), Sx127xError<CommsError, PinError>>;
 
     /// Write to the specified register
-    fn reg_write(&mut self, reg: u16, data: &[u8]) -> Result<(), Sx127xError<CommsError, PinError>>;
+    fn reg_write(&mut self, reg: u8, data: &[u8]) -> Result<(), Sx127xError<CommsError, PinError>>;
     /// Read from the specified register
-    fn reg_read(&mut self, reg: u16, data: &mut [u8]) -> Result<(), Sx127xError<CommsError, PinError>>;
+    fn reg_read(&mut self, reg: u8, data: &mut [u8]) -> Result<(), Sx127xError<CommsError, PinError>>;
 
     /// Write to the specified FIFO buffer
     fn buff_write(&mut self, data: &[u8]) -> Result<(), Sx127xError<CommsError, PinError>>;
@@ -52,7 +52,7 @@ where
     }
 
     /// Read from the specified register
-    fn reg_read<'a>(&mut self, reg: u16, data: &mut [u8]) -> Result<(), Sx127xError<CommsError, PinError>> {
+    fn reg_read<'a>(&mut self, reg: u8, data: &mut [u8]) -> Result<(), Sx127xError<CommsError, PinError>> {
         // Setup register read
         let out_buf: [u8; 1] = [reg as u8 & 0x7F];
         self.wait_busy()?;
@@ -62,7 +62,7 @@ where
     }
 
     /// Write to the specified register
-    fn reg_write(&mut self, reg: u16, data: &[u8]) -> Result<(), Sx127xError<CommsError, PinError>> {
+    fn reg_write(&mut self, reg: u8, data: &[u8]) -> Result<(), Sx127xError<CommsError, PinError>> {
         // Setup register write
         let out_buf: [u8; 1] = [reg as u8 | 0x80];
         self.wait_busy()?;

@@ -5,6 +5,7 @@
 
 extern crate libc;
 extern crate log;
+extern crate bitflags;
 
 use core::convert::TryFrom;
 
@@ -18,6 +19,7 @@ extern crate embedded_spi;
 use embedded_spi::{Error as WrapError, wrapper::Wrapper as SpiWrapper};
 
 pub mod bindings;
+use bindings::{self as sx127x};
 
 #[cfg(feature = "ffi")]
 use bindings::{SX1276_t};
@@ -123,7 +125,10 @@ where
         sx127x.reset()?;
 
         // Calibrate RX chain
-        //sx1276::RxChainCalibration(&sx127x.c);
+        sx127x.rf_chain_calibration()?;
+
+        // Set state to sleep
+        sx127x.set_state(State::Sleep)?;
 
         // Init IRQs (..?)
 
@@ -149,16 +154,22 @@ where
     /// Fetch device silicon version
     pub fn silicon_version(&mut self) -> Result<u8, Sx127xError<CommsError, PinError>> {
         let mut data = [0u8; 1];
-        self.hal.reg_read(regs::Common::VERSION as u16, &mut data)?;
+        self.hal.reg_read(regs::Common::VERSION as u8, &mut data)?;
         Ok(data[0])
     }
 
     /// Fetch device state
     pub fn get_state(&mut self) -> Result<State, Sx127xError<CommsError, PinError>> {
         let mut data = [0u8; 1];
-        self.hal.reg_read(regs::Common::OPMODE as u16, &mut data)?;
-        let state = State::try_from(data[0]).map_err(|_| Sx127xError::InvalidResponse)?;
+        let state = self.read_reg(regs::Common::OPMODE)?;
+        let state = State::try_from(state & device::OPMODE_STATE_MASK ).map_err(|_| Sx127xError::InvalidResponse)?;
         Ok(state)
+    }
+
+    /// Set device state
+    pub fn set_state(&mut self, state: State) -> Result<(), Sx127xError<CommsError, PinError>> {
+        self.update_reg(regs::Common::OPMODE, device::OPMODE_STATE_MASK, state as u8)?;
+        Ok(())
     }
 
     // Calculate a channel number from a given frequency
@@ -166,16 +177,87 @@ where
         (freq / device::FREQ_STEP) as u32
     }
 
-    // Set the channel
+    // Set the channel by index
     pub fn set_channel(&mut self, channel: u32) -> Result<(), Sx127xError<CommsError, PinError>> {
-        self.hal.reg_write(regs::Common::FRFMSB as u16, &[(channel >> 16) as u8])?;
-        self.hal.reg_write(regs::Common::FRFMID as u16, &[(channel >> 8) as u8])?;
-        self.hal.reg_write(regs::Common::FRFLSB as u16, &[(channel >> 0) as u8])?;
+        let outgoing = [
+            (channel >> 16) as u8,
+            (channel >> 8) as u8,
+            (channel >> 0) as u8,
+        ];
+        
+        self.hal.reg_write(regs::Common::FRFMSB as u8, &outgoing)?;
+
         Ok(())
     }
 
-    pub fn channel_clear(&mut self) -> Result<bool, Sx127xError<CommsError, PinError>> {
-        Ok(true)
+    // Fetch the current channel index
+    pub fn get_channel(&mut self) -> Result<u32, Sx127xError<CommsError, PinError>> {
+        let mut incoming = [0u8; 3];
+
+        self.hal.reg_read(regs::Common::FRFMSB as u8, &mut incoming)?;
+        let ch = (incoming[0] as u32) << 16 | (incoming[1] as u32) << 8 | (incoming[2] as u32) << 0;
+
+        Ok(ch)
+    }
+
+    pub fn write_reg<R>(&mut self, reg: R, value: u8) -> Result<(), Sx127xError<CommsError, PinError>> 
+    where R: Copy + Clone + Into<u8> {
+        self.hal.reg_write(reg.into(), &[value])?;
+        Ok(())
+    }
+
+    pub fn read_reg<R>(&mut self, reg: R) -> Result<u8, Sx127xError<CommsError, PinError>> 
+    where R: Copy + Clone + Into<u8> {
+        let mut incoming = [0u8; 1];
+        self.hal.reg_read(reg.into(), &mut incoming)?;
+        Ok(incoming[0])
+    }
+
+    pub fn update_reg<R>(&mut self, reg: R, mask: u8, value: u8) -> Result<u8, Sx127xError<CommsError, PinError>> 
+    where R: Copy + Clone + Into<u8> {
+        let existing = self.read_reg(reg)?;
+        let updated = (existing & !mask) | (value & mask);
+        self.write_reg(reg, updated)?;
+        Ok(updated)
+    }
+
+
+    pub fn fake(&mut self) -> Result<bool, Sx127xError<CommsError, PinError>> {
+        unimplemented!()
+    }
+
+    pub fn configure_lora(&mut self) -> Result<bool, Sx127xError<CommsError, PinError>> {
+        unimplemented!()
+    }
+
+    pub fn rf_chain_calibration(&mut self) -> Result<(), Sx127xError<CommsError, PinError>> {
+        // Load initial PA config
+        let channel = self.get_channel()?;
+        let pa_config = self.read_reg(regs::Common::PACONFIG)?;
+
+        // Zero out PA config
+        self.write_reg(regs::Common::PACONFIG, 0x00)?;
+
+        // Launch calibration for the LF band
+        self.update_reg(regs::Fsk::IMAGECAL, sx127x::RF_IMAGECAL_IMAGECAL_MASK as u8, sx127x::RF_IMAGECAL_IMAGECAL_START as u8)?;
+
+        // Block on calibration complete
+        while self.read_reg(regs::Fsk::IMAGECAL)? & (sx127x::RF_IMAGECAL_IMAGECAL_RUNNING as u8) != 0 {}
+
+        // Set a channel in the HF band
+        self.set_channel( Self::freq_to_channel(868e6) )?;
+
+        // Launch calibration for the HF band
+        self.update_reg(regs::Fsk::IMAGECAL, sx127x::RF_IMAGECAL_IMAGECAL_MASK as u8, sx127x::RF_IMAGECAL_IMAGECAL_START as u8)?;
+
+        // Block on calibration complete
+        while self.read_reg(regs::Fsk::IMAGECAL)? & (sx127x::RF_IMAGECAL_IMAGECAL_RUNNING as u8) != 0 {}
+
+        // Restore PA config and channel
+        self.set_channel(channel)?;
+        self.write_reg(regs::Common::PACONFIG, pa_config)?;
+
+        Ok(())
     }
 }
 
