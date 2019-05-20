@@ -31,7 +31,7 @@ pub mod ffi;
 
 
 pub mod device;
-use device::{State};
+use device::{State, Modem};
 pub mod regs;
 
 /// Sx127x Spi operating mode
@@ -226,8 +226,21 @@ where
         unimplemented!()
     }
 
-    pub fn configure_lora(&mut self) -> Result<bool, Sx127xError<CommsError, PinError>> {
-        unimplemented!()
+    /// Set operating modem for the device
+    pub fn set_modem(&mut self, modem: Modem) -> Result<(), Sx127xError<CommsError, PinError>> {
+        match modem {
+            Modem::Standard => {
+                self.set_state(State::Sleep)?;
+                self.update_reg(regs::Common::OPMODE, sx127x::RFLR_OPMODE_LONGRANGEMODE_MASK as u8, sx127x::RFLR_OPMODE_LONGRANGEMODE_OFF as u8)?;
+
+            },
+            Modem::LoRa => {
+                self.set_state(State::Sleep)?;
+                self.update_reg(regs::Common::OPMODE, sx127x::RFLR_OPMODE_LONGRANGEMODE_MASK as u8, sx127x::RFLR_OPMODE_LONGRANGEMODE_ON as u8)?;
+            }
+        }
+
+        Ok(())
     }
 
     pub fn rf_chain_calibration(&mut self) -> Result<(), Sx127xError<CommsError, PinError>> {

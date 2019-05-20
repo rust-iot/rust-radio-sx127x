@@ -41,6 +41,11 @@ pub enum LongRangeMode {
     On = 0x80,
 }
 
+pub enum Modem {
+    Standard,
+    LoRa,
+}
+
 impl TryFrom<u8> for State {
     type Error = ();
 
@@ -55,11 +60,6 @@ impl TryFrom<u8> for State {
             _ => Err(())
         }
     }
-}
-
-pub enum Modem {
-    FSK = 0,
-    LoRA = 1,
 }
 
 /// Receive configuration
