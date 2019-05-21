@@ -4,6 +4,8 @@
 
 extern crate bindgen;
 extern crate git2;
+extern crate cc;
+
 use git2::Repository;
 
 use std::env;
@@ -32,6 +34,13 @@ const REPO_NAME: &str = "libsx127x-src";
 
 fn main() {
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let ffi_enabled = build_helper::cargo::features::enabled("ffi");
+
+
+    if !ffi_enabled {
+        println!("FFI disabled, skipping repository clone and build");
+        return
+    }
 
     // Select path from 
     let repo_path = match env::var(REPO_VAR) {
@@ -100,6 +109,8 @@ fn main() {
         .write(Box::new(file))
         .expect("Couldn't write bindings!");
 
+    println!("cargo:rerun-if-changed={}", &repo_path.to_str().unwrap());
+
     // Build libraries
     println!("Building library");
     cc::Build::new()
@@ -115,5 +126,5 @@ fn main() {
 
     // Link the library
     println!("cargo:rustc-link-lib=sx1280");
-    println!("cargo:rerun-if-changed={}", &repo_path.to_str().unwrap());
+    
 }

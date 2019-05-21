@@ -1,7 +1,7 @@
 //! SX127x Radio Driver
 //! Copyright 2018 Ryan Kurte
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Register {
     Common(Common),
     Fsk(Fsk),
@@ -33,6 +33,24 @@ impl Into<u8> for LoRa {
 impl Into<u8> for Fsk {
     fn into(self) -> u8 {
         self as u8
+    }
+}
+
+impl From<Common> for Register {
+    fn from(common: Common) -> Register {
+        Register::Common(common)
+    }
+}
+
+impl From<LoRa> for Register {
+    fn from(lora: LoRa) -> Register {
+        Register::LoRa(lora)
+    }
+}
+
+impl From<Fsk> for Register {
+    fn from(fsk: Fsk) -> Register {
+        Register::Fsk(fsk)
     }
 }
 
@@ -178,3 +196,13 @@ pub enum Fsk {
     IRQFLAGS2 = 0x3F,
 }
 
+
+pub const RF_IMAGECAL_AUTOIMAGECAL_MASK:    u8 = 0x7F;
+pub const RF_IMAGECAL_AUTOIMAGECAL_ON:      u8 = 0x80;
+pub const RF_IMAGECAL_AUTOIMAGECAL_OFF:     u8 = 0x00;
+
+pub const RF_IMAGECAL_IMAGECAL_MASK:        u8 = 0xBF;
+pub const RF_IMAGECAL_IMAGECAL_START:       u8 = 0x40;
+
+pub const RF_IMAGECAL_IMAGECAL_RUNNING:     u8 = 0x20;
+pub const RF_IMAGECAL_IMAGECAL_DONE:        u8 = 0x00;

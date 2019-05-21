@@ -5,27 +5,28 @@ version = "0.1.0"
 authors = ["Ryan Kurte <ryankurte@gmail.com>"]
 
 [features]
-ffi = [ "cc", "git2" ]
-util = [ "structopt", "linux-embedded-hal", "log", "simplelog" ] 
-default = [ "ffi", "util" ]
+ffi = [ ]
+util = [ "structopt", "linux-embedded-hal", "simplelog" ] 
+default = [ ]
 
 [dependencies]
 libc = "0.2.42"
 embedded-hal = { version = "0.2.3", features = ["unproven"] }
-embedded-spi = "0.5.0"
+embedded-spi = "0.5.1"
 #radio = { path = "../rust-radio" }
 
 structopt = { version = "0.2.15", optional = true }
 linux-embedded-hal = { version = "0.2.2", optional = true }
 simplelog = { version = "0.5.3", optional = true }
-log = { version = "0.4.6", optional = true }
+log = { version = "0.4.6" }
 bitflags = "1.0.4"
 
 
 [build-dependencies]
 bindgen = "0.47.0"
-cc = { version = "1.0", optional = true }
-git2 = { version = "0.8.0", optional = true }
+cc = { version = "1.0" }
+git2 = { version = "0.8.0" }
+build-helper = "0.1.1"
 
 [dev-dependencies]
 color-backtrace = "0.1.3"
