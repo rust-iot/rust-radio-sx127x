@@ -9,12 +9,9 @@ use crate::base::Hal as Sx127xHal;
 use crate::device::{State, Modem, regs};
 use crate::device::lora::*;
 
-impl<Hal, CommsError, Output, Input, PinError, Delay> Sx127x<Hal, CommsError, Output, Input, PinError, Delay>
+impl<Hal, CommsError, PinError> Sx127x<Hal, CommsError, PinError>
 where
     Hal: Sx127xHal<CommsError, PinError>,
-    Output: OutputPin<Error = PinError>,
-    Input: InputPin<Error = PinError>,
-    Delay: DelayMs<u32>,
 {
 
     pub fn set_power_lora(&mut self, power: u8) -> Result<(), Sx127xError<CommsError, PinError>> {

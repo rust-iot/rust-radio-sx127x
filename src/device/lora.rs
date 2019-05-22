@@ -1,5 +1,5 @@
 
-
+#[derive(Clone, PartialEq, Debug)]
 pub struct Config {
     /// LoRa channel bandwidth
     pub bandwidth: Bandwidth,

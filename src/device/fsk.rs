@@ -1,5 +1,5 @@
 
-
+#[derive(Clone, PartialEq, Debug)]
 pub struct Config {
 
 }

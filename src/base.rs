@@ -1,17 +1,23 @@
 //! Basic HAL functions for communicating with the radio device
 
-use hal::blocking::{delay};
+use hal::blocking::delay::DelayMs;
 use hal::digital::v2::{InputPin, OutputPin};
 
-use embedded_spi::{Transactional};
+use embedded_spi::{Transactional, Reset, Busy, PinState};
 use embedded_spi::{Error as WrapError};
 
 use crate::{Sx127x, Sx127xError};
 
-/// Comms implementation can be generic over SPI or UART connections
+/// Hal implementation can be generic over SPI or UART connections
 pub trait Hal<CommsError, PinError> {
+    /// Reset the device
+    fn reset(&mut self) -> Result<(), Sx127xError<CommsError, PinError>>;
+
     /// Wait on radio device busy
     fn wait_busy(&mut self) -> Result<(), Sx127xError<CommsError, PinError>>;
+
+    /// Delay for the specified time
+    fn delay_ms(&mut self, ms: u32);
 
     /// Write to the specified register
     fn reg_write(&mut self, reg: u8, data: &[u8]) -> Result<(), Sx127xError<CommsError, PinError>>;
@@ -24,31 +30,32 @@ pub trait Hal<CommsError, PinError> {
     fn buff_read(&mut self, data: &mut [u8]) -> Result<(), Sx127xError<CommsError, PinError>>;
 }
 
-impl<Comms, CommsError, Output, Input, PinError, Delay> Sx127x<Comms, CommsError, Output, Input, PinError, Delay>
-where
-    Output: OutputPin<Error = PinError>,
-    Input: InputPin<Error = PinError>,
-    Delay: delay::DelayMs<u32>,
-{ 
-    /// Reset the radio
-    pub fn reset(&mut self) -> Result<(), Sx127xError<CommsError, PinError>> {
-        self.sdn.set_low().map_err(|e| Sx127xError::Pin(e) )?;
-        self.delay.delay_ms(1);
-        self.sdn.set_high().map_err(|e| Sx127xError::Pin(e) )?;
-        self.delay.delay_ms(10);
-
-        Ok(())
-    }
-}
-
+/// Implement HAL for embedded helper trait implementers
 impl<T, CommsError, PinError> Hal<CommsError, PinError> for T
 where
     T: Transactional<Error=WrapError<CommsError, PinError>>,
+    T: Reset<Error=WrapError<CommsError, PinError>>,
+    T: Busy<Error=WrapError<CommsError, PinError>>,
+    T: DelayMs<u32>,
 {    
-    /// Wait on radio device busy
-    fn wait_busy(&mut self) -> Result<(), Sx127xError<CommsError, PinError>> {
+    /// Reset the radio
+    fn reset(&mut self) -> Result<(), Sx127xError<CommsError, PinError>> {
+        self.set_reset(PinState::Low).map_err(|e| Sx127xError::from(e) )?;
+        self.delay_ms(1);
+        self.set_reset(PinState::High).map_err(|e| Sx127xError::from(e) )?;
+        self.delay_ms(10);
 
         Ok(())
+    }
+
+    /// Wait on radio device busy
+    fn wait_busy(&mut self) -> Result<(), Sx127xError<CommsError, PinError>> {
+        Ok(())
+    }
+
+    /// Delay for the specified time
+    fn delay_ms(&mut self, ms: u32) {
+        self.delay_ms(ms);
     }
 
     /// Read from the specified register

@@ -44,14 +44,8 @@ pub const SPI_MODE: SpiMode = SpiMode {
 };
 
 /// Sx127x device object
-pub struct Sx127x<Hal, CommsError, OutputPin, InputPin, PinError, Delay>{
+pub struct Sx127x<Hal, CommsError, PinError>{
     hal: Hal,
-
-    delay: Delay,
-
-    sdn: OutputPin,
-
-    _dio: [Option<InputPin>; 3],
 
     #[cfg(feature = "ffi")]
     c: Option<SX1276_t>,
@@ -66,6 +60,7 @@ pub struct Sx127x<Hal, CommsError, OutputPin, InputPin, PinError, Delay>{
 }
 
 /// Initial radio configuration object
+#[derive(Clone, PartialEq, Debug)]
 pub struct Settings {
     /// Radio mode specific configuration
     config: Config,
@@ -73,6 +68,7 @@ pub struct Settings {
     xtal_freq: u32,
 }
 
+#[derive(Clone, PartialEq, Debug)]
 pub enum Config {
     LoRa(device::lora::Config),
     Standard(device::fsk::Config),
@@ -114,7 +110,7 @@ impl <CommsError, PinError> From<WrapError<CommsError, PinError>> for Sx127xErro
     }
 }
 
-impl<Spi, CommsError, Output, Input, PinError, Delay> Sx127x<SpiWrapper<Spi, CommsError, Output, Input, PinError>, CommsError, Output, Input, PinError, Delay>
+impl<Spi, CommsError, Output, Input, PinError, Delay> Sx127x<SpiWrapper<Spi, CommsError, Output, Input, PinError, Delay>, CommsError, PinError>
 where
     Spi: Transfer<u8, Error = CommsError> + Write<u8, Error = CommsError>,
     Output: OutputPin<Error = PinError>,
@@ -124,28 +120,26 @@ where
     /// Create an Sx127x with the provided `Spi` implementation and pins
     pub fn spi(spi: Spi, cs: Output, busy: Input, sdn: Output, delay: Delay, settings: Settings) -> Result<Self, Sx127xError<CommsError, PinError>> {
         // Create SpiWrapper over spi/cs/busy
-        let mut hal = SpiWrapper::new(spi, cs);
+        let mut hal = SpiWrapper::new(spi, cs, delay);
         hal.with_busy(busy);
+        hal.with_reset(sdn);
         // Create instance with new hal
-        Self::new(hal, sdn, delay, settings)
+        Self::new(hal, settings)
     }
 }
 
 
 
-impl<Hal, CommsError, Output, Input, PinError, Delay> Sx127x<Hal, CommsError, Output, Input, PinError, Delay>
+impl<Hal, CommsError, PinError> Sx127x<Hal, CommsError, PinError>
 where
     Hal: base::Hal<CommsError, PinError>,
-    Output: OutputPin<Error = PinError>,
-    Input: InputPin<Error = PinError>,
-    Delay: delay::DelayMs<u32>,
 {
-    pub fn new(hal: Hal, sdn: Output, delay: Delay, settings: Settings) -> Result<Self, Sx127xError<CommsError, PinError>> {
+    pub fn new(hal: Hal, settings: Settings) -> Result<Self, Sx127xError<CommsError, PinError>> {
         // Build container object
-        let mut sx127x = Self::build(hal, sdn, delay, settings);
+        let mut sx127x = Self::build(hal, settings);
 
         // Reset IC
-        sx127x.reset()?;
+        sx127x.hal.reset()?;
 
         // Calibrate RX chain
         sx127x.rf_chain_calibration()?;
@@ -159,17 +153,27 @@ where
             sx127x.write_reg(*reg, *val)?;
         }
 
-        // Activate specified moem
-        //sx127x.set_modem(sx127x.settings.modem)?;
+        // Configure specified modem
+        sx127x.configure()?;
 
 
         Ok(sx127x)
     }
 
-    pub(crate) fn build(hal: Hal, sdn: Output, delay: Delay, settings: Settings) -> Self {
+    pub fn configure(&mut self) -> Result<(), Sx127xError<CommsError, PinError>> {
+        let settings = self.settings.clone();
+
+        match settings.config {
+            Config::LoRa(lora) => self.configure_lora(lora)?,
+            _ => error!("standard configuration not yet supported"),
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn build(hal: Hal, settings: Settings) -> Self {
         Sx127x { 
-            hal, sdn, delay, settings,
-            _dio: [None, None, None],
+            hal, settings,
             #[cfg(feature = "ffi")]
             c: None, 
             #[cfg(feature = "ffi")]

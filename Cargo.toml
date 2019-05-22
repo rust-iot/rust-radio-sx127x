@@ -7,7 +7,7 @@ authors = ["Ryan Kurte <ryankurte@gmail.com>"]
 [features]
 ffi = [ ]
 util = [ "structopt", "linux-embedded-hal", "simplelog" ] 
-default = [ ]
+default = [ "util" ]
 
 [dependencies]
 libc = "0.2.42"

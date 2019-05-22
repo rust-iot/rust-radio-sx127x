@@ -62,6 +62,25 @@ pub enum Command {
     #[structopt(name="silicon-version")]
     /// Fetch the device firmware version
     SiliconVersion,
+
+    #[structopt(name="tx")]
+    /// Transmit a (string) packet
+    Transmit(Transmit),
+
+    #[structopt(name="rx")]
+    /// Receive a (string) packet
+    Receive(Receive),
+}
+
+#[derive(StructOpt, PartialEq, Debug)]
+pub struct Transmit {
+    #[structopt(long = "data")]
+    data: String
+}
+
+#[derive(StructOpt, PartialEq, Debug)]
+pub struct Receive {
+
 }
 
 fn main() {
@@ -112,6 +131,14 @@ fn main() {
             let version = radio.silicon_version().expect("error fetching silicon version");
             info!("Silicon version: 0x{:X}", version);
         }
+        Command::Transmit(tx) => {
+            radio.start_send( tx.data.as_bytes() ).expect("error starting send");
+            while radio.check_send().expect("error checking send") != true {}
+        },
+        Command::Receive(rx) => {
+            radio.start_receive().expect("error starting receive");
+            while radio.check_receive(false).expect("error checking receive") != true {}
+        },
         //_ => warn!("unsuppored command: {:?}", opts.command),
     }
 
