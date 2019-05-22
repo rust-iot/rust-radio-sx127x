@@ -155,7 +155,7 @@ where
         debug!("Starting send (data: {:?})", data);
 
         // TODO: support large packet sending
-        assert!(data.len() > 64);
+        assert!(data.len() < 64);
 
         // TODO: example driver sets IqInverted here, doesn't seem like it should be required.
 
@@ -182,10 +182,13 @@ where
 
     pub fn check_send(&mut self) -> Result<bool, Sx127xError<CommsError, PinError>> {
         let irq = self.get_interrupts(true)?;
+        debug!("Poll check send, irq: {:?}", irq);
 
         if irq.contains(Irq::TX_DONE) {
+            debug!("Send complete!");
             Ok(true)
         } else {
+            debug!("Send pending");
             Ok(false)
         }
     }
@@ -216,8 +219,11 @@ where
         self.write_reg(regs::LoRa::FIFORXBASEADDR, 0x00)?;
         self.write_reg(regs::LoRa::FIFOADDRPTR, 0x00)?;
 
+        // Set RX packet max length
+        self.write_reg(regs::LoRa::PAYLOADLENGTH, 255)?;
+
         // Set RX mode
-        self.set_state(State::RxOnce)?;
+        self.set_state(State::Rx)?;
 
         Ok(())
     }
@@ -229,18 +235,23 @@ where
     /// internally handled (returning Ok(false)) or passed back to the caller as errors.
     pub fn check_receive(&mut self, restart: bool) -> Result<bool, Sx127xError<CommsError, PinError>> {
         let irq = self.get_interrupts(true)?;
+        let mut res = Ok(false);
+
+        debug!("Poll check receive, irq: {:?}", irq);
 
         // Process flags
-        let mut res = Ok(false);
-        if irq.contains(Irq::RX_TIMEOUT) {
-            debug!("RX timeout");
-            res = Err(Sx127xError::Timeout);
+        
+        if irq.contains(Irq::RX_DONE) {
+            debug!("RX complete");
+            res = Ok(true);
         } else if irq.contains(Irq::CRC_ERROR) {
             debug!("RX CRC error");
             res = Err(Sx127xError::Crc);
-        } else if irq.contains(Irq::RX_DONE) {
-            debug!("RX complete");
-            res = Ok(true);
+        } else if irq.contains(Irq::RX_TIMEOUT) {
+            debug!("RX timeout");
+            res = Err(Sx127xError::Timeout);
+        } else   {
+            debug!("RX pending");
         }
 
         match (restart, res) {
@@ -251,5 +262,17 @@ where
             },
             (_, r) => r
         }
+    }
+
+    pub fn get_received(&mut self, mut data: &mut[u8]) -> Result<u8, Sx127xError<CommsError, PinError>> {
+        let n = self.read_reg(regs::LoRa::RXNBBYTES)?;
+
+        debug!("FIFO RX {} bytes", n);
+
+        self.hal.buff_read(&mut data)?;
+
+        debug!("Read data: {:?}", &data[0..n as usize]);
+
+        Ok(n)
     }
 }
