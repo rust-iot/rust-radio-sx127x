@@ -9,12 +9,11 @@ use crate::base::Hal as Sx127xHal;
 use crate::device::{State, Modem, regs};
 use crate::device::lora::*;
 
-impl<Hal, CommsError, PinError> Sx127x<Hal, CommsError, PinError>
+impl<Hal, CommsError, PinError> Sx127x<Hal, CommsError, PinError, Config>
 where
     Hal: Sx127xHal<CommsError, PinError>,
 {
-
-    pub fn set_power_lora(&mut self, power: u8) -> Result<(), Sx127xError<CommsError, PinError>> {
+    pub fn set_power(&mut self, power: u8) -> Result<(), Sx127xError<CommsError, PinError>> {
         let config = self.read_reg(regs::Common::PACONFIG)?;
 
         if config & PASELECT_MASK == 0 {
@@ -40,7 +39,7 @@ where
     }
 
     /// Configure the radio in lora mode with the provided configuration
-    pub fn configure_lora(&mut self, config: Config) -> Result<(), Sx127xError<CommsError, PinError>> {
+    pub fn configure(&mut self, config: &Config) -> Result<(), Sx127xError<CommsError, PinError>> {
         use device::lora::{SpreadingFactor::*, Bandwidth::*};
 
         debug!("Configuring lora mode");
@@ -155,9 +154,17 @@ where
         debug!("Starting send (data: {:?})", data);
 
         // TODO: support large packet sending
-        assert!(data.len() < 64);
+        assert!(data.len() < 255);
 
-        // TODO: example driver sets IqInverted here, doesn't seem like it should be required.
+        // Configure IQ inversion
+        // TODO: seems this shouldn't be required every time?
+        if self.config.invert_iq {
+            self.update_reg(regs::LoRa::INVERTIQ, INVERTIQ_TX_MASK | INVERTIQ_RX_MASK, INVERTIQ_RX_OFF | INVERTIQ_TX_ON)?;
+            self.write_reg(regs::LoRa::INVERTIQ2, INVERTIQ2_ON)?;
+        } else {
+            self.update_reg(regs::LoRa::INVERTIQ, INVERTIQ_TX_MASK | INVERTIQ_RX_MASK, INVERTIQ_RX_OFF | INVERTIQ_TX_OFF)?;
+            self.write_reg(regs::LoRa::INVERTIQ2, INVERTIQ2_OFF)?;
+        }
 
         // Set TX length
         self.write_reg(regs::LoRa::PAYLOADLENGTH, data.len() as u8)?;
@@ -198,7 +205,15 @@ where
 
         debug!("Starting receive");
         
-        // TODO: example driver sets IqInverted here, doesn't seem like it should be required.
+        // Configure IQ inversion
+        // TODO: seems this shouldn't be required every time?
+        if self.config.invert_iq {
+            self.update_reg(regs::LoRa::INVERTIQ, INVERTIQ_TX_MASK | INVERTIQ_RX_MASK, INVERTIQ_RX_ON | INVERTIQ_TX_OFF)?;
+            self.write_reg(regs::LoRa::INVERTIQ2, INVERTIQ2_ON)?;
+        } else {
+            self.update_reg(regs::LoRa::INVERTIQ, INVERTIQ_TX_MASK | INVERTIQ_RX_MASK, INVERTIQ_RX_OFF | INVERTIQ_TX_OFF)?;
+            self.write_reg(regs::LoRa::INVERTIQ2, INVERTIQ2_OFF)?;
+        }
 
         let bandwidth = Bandwidth::Bandwidth125kHz;
 
@@ -269,7 +284,7 @@ where
 
         debug!("FIFO RX {} bytes", n);
 
-        self.hal.buff_read(&mut data)?;
+        self.hal.buff_read(&mut data[0..n as usize])?;
 
         debug!("Read data: {:?}", &data[0..n as usize]);
 

@@ -34,6 +34,7 @@ pub mod ffi;
 
 pub mod device;
 use device::{State, Modem, regs};
+pub use device::lora::{Config as LoRaConfig};
 
 pub mod lora;
 
@@ -44,7 +45,7 @@ pub const SPI_MODE: SpiMode = SpiMode {
 };
 
 /// Sx127x device object
-pub struct Sx127x<Hal, CommsError, PinError>{
+pub struct Sx127x<Hal, CommsError, PinError, Config>{
     hal: Hal,
 
     #[cfg(feature = "ffi")]
@@ -57,27 +58,21 @@ pub struct Sx127x<Hal, CommsError, PinError>{
     _pe: PhantomData<PinError>,
 
     settings: Settings,
+
+    config: Config,
 }
 
 /// Initial radio configuration object
+/// This contains general information for either radio configuration
 #[derive(Clone, PartialEq, Debug)]
 pub struct Settings {
-    /// Radio mode specific configuration
-    config: Config,
     /// Radio crystal frequency
     xtal_freq: u32,
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub enum Config {
-    LoRa(device::lora::Config),
-    Standard(device::fsk::Config),
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self{
-            config: Config::LoRa(device::lora::Config::default()),
             xtal_freq: 32000000,
         }
     }
@@ -110,7 +105,7 @@ impl <CommsError, PinError> From<WrapError<CommsError, PinError>> for Sx127xErro
     }
 }
 
-impl<Spi, CommsError, Output, Input, PinError, Delay> Sx127x<SpiWrapper<Spi, CommsError, Output, Input, PinError, Delay>, CommsError, PinError>
+impl<Spi, CommsError, Output, Input, PinError, Delay> Sx127x<SpiWrapper<Spi, CommsError, Output, Input, PinError, Delay>, CommsError, PinError, ()>
 where
     Spi: Transfer<u8, Error = CommsError> + Write<u8, Error = CommsError>,
     Output: OutputPin<Error = PinError>,
@@ -130,13 +125,14 @@ where
 
 
 
-impl<Hal, CommsError, PinError> Sx127x<Hal, CommsError, PinError>
+impl<Hal, CommsError, PinError> Sx127x<Hal, CommsError, PinError, ()>
 where
     Hal: base::Hal<CommsError, PinError>,
 {
+    /// Create a new radio instance
     pub fn new(hal: Hal, settings: Settings) -> Result<Self, Sx127xError<CommsError, PinError>> {
         // Build container object
-        let mut sx127x = Self::build(hal, settings);
+        let mut sx127x = Self::build(hal, settings, ());
 
         // Reset IC
         sx127x.hal.reset()?;
@@ -153,27 +149,42 @@ where
             sx127x.write_reg(*reg, *val)?;
         }
 
-        // Configure specified modem
-        sx127x.configure()?;
-
-
         Ok(sx127x)
     }
 
-    pub fn configure(&mut self) -> Result<(), Sx127xError<CommsError, PinError>> {
-        let settings = self.settings.clone();
+    /// Configure the modem into LoRa mode
+    pub fn lora(self, lora_config: LoRaConfig) -> Result<Sx127x<Hal, CommsError, PinError, LoRaConfig>, Sx127xError<CommsError, PinError>> {
+        // Destructure existing object
+        let Self{hal, settings, config, _ce, _pe} = self;
 
-        match settings.config {
-            Config::LoRa(lora) => self.configure_lora(lora)?,
-            _ => error!("standard configuration not yet supported"),
-        }
+        // Create new object
+        let mut s = Sx127x { 
+            hal, settings, 
+            config: lora_config.clone(),
+            #[cfg(feature = "ffi")]
+            c: None, 
+            #[cfg(feature = "ffi")]
+            err: None,
+            _ce,
+            _pe,
+        };
 
-        Ok(())
+        // Configure LoRa mode
+        s.configure(&lora_config)?;
+
+        // Return new object
+        Ok(s)
     }
+}
 
-    pub(crate) fn build(hal: Hal, settings: Settings) -> Self {
+impl<Hal, CommsError, PinError, Config> Sx127x<Hal, CommsError, PinError, Config>
+where
+    Hal: base::Hal<CommsError, PinError>,
+{
+
+    pub(crate) fn build(hal: Hal, settings: Settings, config: Config) -> Self {
         Sx127x { 
-            hal, settings,
+            hal, settings, config,
             #[cfg(feature = "ffi")]
             c: None, 
             #[cfg(feature = "ffi")]
@@ -182,6 +193,12 @@ where
             _pe: PhantomData,
         }
     }
+}
+
+impl<Hal, CommsError, PinError, Config> Sx127x<Hal, CommsError, PinError, Config>
+where
+    Hal: base::Hal<CommsError, PinError>,
+{
 
     /// Read a u8 value from the specified register
     pub fn read_reg<R>(&mut self, reg: R) -> Result<u8, Sx127xError<CommsError, PinError>> 
@@ -313,13 +330,8 @@ where
 
         Ok(())
     }
-
-    pub fn fake(&mut self) -> Result<(), Sx127xError<CommsError, PinError>> {
-        unimplemented!()
-    }
-
-
 }
+
 
 #[cfg(test)]
 mod tests {

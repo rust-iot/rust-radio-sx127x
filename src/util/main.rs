@@ -14,7 +14,7 @@ use linux_embedded_hal::sysfs_gpio::Direction;
 
 
 extern crate radio_sx127x;
-use radio_sx127x::{Sx127x, Settings};
+use radio_sx127x::{Sx127x, Settings, LoRaConfig};
 
 #[derive(StructOpt)]
 #[structopt(name = "Sx127x-util", about = "A Command Line Interface (CLI) for interacting with a local Sx127x radio device")]
@@ -124,6 +124,9 @@ fn main() {
 
     let settings = Settings::default();
     let mut radio = Sx127x::spi(spi, cs, busy, rst, Delay{}, settings).expect("error creating device");
+
+    let config = LoRaConfig::default();
+    let mut radio = radio.lora(config).expect("error configuring lora mode");
 
     debug!("Executing command");
 

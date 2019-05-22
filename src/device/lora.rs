@@ -22,11 +22,13 @@ pub struct Config {
 
     /// Power amplifer output selection
     pub pa_output: PaSelect,
+
+    pub invert_iq: bool,
 }
 
 impl Default for Config {
     fn default() -> Self {
-        Config{
+        Config {
             bandwidth: Bandwidth::Bandwidth125kHz,
             sf: SpreadingFactor::Sf7,
             coderate: Coderate::CodingRate1,
@@ -37,6 +39,7 @@ impl Default for Config {
             payload_crc: PayloadCrc::Enabled,
             frequency_hop: FrequencyHopping::Disabled,
             pa_output: PaSelect::Rfo(0x04),
+            invert_iq: true,
         }
     }
 }
@@ -159,6 +162,17 @@ pub enum DetectionOptimize {
     /// Optimised for Sf6
     Sf6 = 0x05,
 }
+
+
+pub const INVERTIQ_RX_MASK: u8 = 0xBF;
+pub const INVERTIQ_RX_OFF:  u8 = 0x00;
+pub const INVERTIQ_RX_ON:   u8 = 0x40;
+pub const INVERTIQ_TX_MASK: u8 = 0xFE;
+pub const INVERTIQ_TX_OFF:  u8 = 0x01;
+pub const INVERTIQ_TX_ON:   u8 = 0x00;
+
+pub const INVERTIQ2_ON:  u8 = 0x19;
+pub const INVERTIQ2_OFF: u8 = 0x1D;
 
 pub const PASELECT_MASK:     u8 = 0b1000_0000;
 pub const PASELECT_RFO:      u8 = 0b0000_0000;

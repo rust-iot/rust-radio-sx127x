@@ -24,10 +24,10 @@ fn integration() {
     let (w1, w2) = (config1.load(), config2.load());
 
     let settings1 = Settings::default();
-    let mut radio1: Sx127x<_, _, _> = Sx127x::new(w1, settings1).expect("error creating radio1");
+    let mut radio1 = Sx127x::new(w1, settings1).expect("error creating radio1");
 
     let settings2 = Settings::default();
-    let mut radio2: Sx127x<_, _, _> = Sx127x::new(w2, settings2).expect("error creating radio1");
+    let mut radio2 = Sx127x::new(w2, settings2).expect("error creating radio1");
 
 
 
