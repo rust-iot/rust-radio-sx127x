@@ -44,6 +44,9 @@ where
 
         debug!("Configuring lora mode");
 
+        // Switch to sleep to change modem mode
+        self.set_state(State::Sleep)?;
+
         // Switch to LoRa mode
         self.set_modem(Modem::LoRa)?;
 
@@ -156,6 +159,8 @@ where
         // TODO: support large packet sending
         assert!(data.len() < 255);
 
+        self.set_state(State::Standby)?;
+
         // Configure IQ inversion
         // TODO: seems this shouldn't be required every time?
         if self.config.invert_iq {
@@ -204,6 +209,8 @@ where
         use device::lora::Bandwidth::*;
 
         debug!("Starting receive");
+
+        self.set_state(State::Standby)?;
         
         // Configure IQ inversion
         // TODO: seems this shouldn't be required every time?
@@ -252,8 +259,10 @@ where
         let irq = self.get_interrupts(true)?;
         let mut res = Ok(false);
 
-        debug!("Poll check receive, irq: {:?}", irq);
-
+        if !irq.is_empty() {
+            debug!("Poll check receive, irq: {:?}", irq);
+        }
+       
         // Process flags
         
         if irq.contains(Irq::RX_DONE) {
@@ -266,7 +275,7 @@ where
             debug!("RX timeout");
             res = Err(Sx127xError::Timeout);
         } else   {
-            debug!("RX pending");
+            trace!("RX pending");
         }
 
         match (restart, res) {
@@ -289,5 +298,17 @@ where
         debug!("Read data: {:?}", &data[0..n as usize]);
 
         Ok(n)
+    }
+
+    pub fn poll_rssi(&mut self) -> Result<i16, Sx127xError<CommsError, PinError>> {
+        let raw = self.read_reg(regs::LoRa::RSSIVALUE)?;
+
+        // TODO: hf/lf port switch
+        let rssi = match false {
+            true  => raw as i16 - 157,
+            false => raw as i16 - 164,
+        };
+
+        Ok(rssi)
     }
 }

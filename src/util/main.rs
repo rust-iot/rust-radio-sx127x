@@ -72,18 +72,38 @@ pub enum Command {
     #[structopt(name="rx")]
     /// Receive a (string) packet
     Receive(Receive),
+
+    #[structopt(name="rssi")]
+    /// Poll for RSSI on the specified channel
+    Rssi(Rssi),
 }
 
 #[derive(StructOpt, PartialEq, Debug)]
 pub struct Transmit {
     #[structopt(long = "data")]
-    data: String
+    data: String,
+
+    #[structopt(long = "continuous")]
+    continuous: bool,
+
+    #[structopt(long = "period", default_value="100")]
+    pub period: u32,
 }
 
 #[derive(StructOpt, PartialEq, Debug)]
 pub struct Receive {
 
 }
+
+#[derive(StructOpt, PartialEq, Debug)]
+pub struct Rssi {
+    #[structopt(long = "period", default_value="100")]
+    pub period: u32,
+
+    #[structopt(long = "continuous")]
+    continuous: bool,
+}
+
 
 fn main() {
     // Load options
@@ -123,9 +143,9 @@ fn main() {
     debug!("Creating radio instance");
 
     let settings = Settings::default();
-    let mut radio = Sx127x::spi(spi, cs, busy, rst, Delay{}, settings).expect("error creating device");
-
     let config = LoRaConfig::default();
+
+    let radio = Sx127x::spi(spi, cs, busy, rst, Delay{}, settings).expect("error creating device");
     let mut radio = radio.lora(config).expect("error configuring lora mode");
 
     debug!("Executing command");
@@ -136,15 +156,23 @@ fn main() {
             let version = radio.silicon_version().expect("error fetching silicon version");
             info!("Silicon version: 0x{:X}", version);
         }
-        Command::Transmit(tx) => {
-            radio.start_send( tx.data.as_bytes() ).expect("error starting send");
+        Command::Transmit(config) => {
             loop {
-                let tx = radio.check_send().expect("error checking send");
-                if tx {
-                    info!("Send complete");
+                radio.start_send( config.data.as_bytes() ).expect("error starting send");
+                loop {
+                    let tx = radio.check_send().expect("error checking send");
+                    if tx {
+                        info!("Send complete");
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(100));
+                }
+
+                if !config.continuous {
                     break;
                 }
-                std::thread::sleep(Duration::from_millis(100));
+
+                std::thread::sleep(Duration::from_millis(config.period as u64));
             }
         },
         Command::Receive(rx) => {
@@ -168,6 +196,20 @@ fn main() {
                 std::thread::sleep(Duration::from_millis(100));
             }
         },
+        Command::Rssi(config) => {
+            radio.start_receive().expect("error starting receive");
+            loop {
+                let rssi = radio.poll_rssi().expect("error fetching RSSI");
+
+                info!("rssi: {}", rssi);
+
+                std::thread::sleep(Duration::from_millis(config.period as u64));
+
+                if !config.continuous {
+                    break
+                }
+            }
+        }
         //_ => warn!("unsuppored command: {:?}", opts.command),
     }
 

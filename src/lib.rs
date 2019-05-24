@@ -93,6 +93,8 @@ pub enum Sx127xError<CommsError, PinError> {
     Timeout,
     /// incoming packet CRC error
     Crc,
+    /// Invalid or unrecognised device
+    InvalidDevice(u8),
 }
 
 impl <CommsError, PinError> From<WrapError<CommsError, PinError>> for Sx127xError<CommsError, PinError> {
@@ -136,6 +138,11 @@ where
 
         // Reset IC
         sx127x.hal.reset()?;
+
+        let version = sx127x.silicon_version()?;
+        if version != 0x12 {
+            return Err(Sx127xError::InvalidDevice(version))
+        }
 
         // Calibrate RX chain
         sx127x.rf_chain_calibration()?;
@@ -288,7 +295,6 @@ where
             Modem::Standard => {
                 self.set_state(State::Sleep)?;
                 self.update_reg(regs::Common::OPMODE, device::OPMODE_LONGRANGEMODE_MASK, device::LongRangeMode::Off as u8)?;
-
             },
             Modem::LoRa => {
                 self.set_state(State::Sleep)?;

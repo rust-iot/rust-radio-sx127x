@@ -32,14 +32,14 @@ impl Default for Config {
             bandwidth: Bandwidth::Bandwidth125kHz,
             sf: SpreadingFactor::Sf7,
             coderate: Coderate::CodingRate1,
-            frequency: 433e6 as u32,
+            frequency: 434e6 as u32,
             preamble_len: 0x8,
             symbol_timeout: 0x64,
             payload_len: PayloadLength::Variable,
             payload_crc: PayloadCrc::Enabled,
             frequency_hop: FrequencyHopping::Disabled,
             pa_output: PaSelect::Rfo(0x04),
-            invert_iq: true,
+            invert_iq: false,
         }
     }
 }
