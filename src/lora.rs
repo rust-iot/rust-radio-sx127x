@@ -14,25 +14,40 @@ where
     Hal: Sx127xHal<CommsError, PinError>,
 {
     pub fn set_power(&mut self, power: u8) -> Result<(), Sx127xError<CommsError, PinError>> {
+        let mut power = power;
+
+        // Limit to viable input range
+        if power > 15 {
+            power = 15;
+        }
+
+        // Read from config to determine PA mode
         let config = self.read_reg(regs::Common::PACONFIG)?;
 
-        if config & PASELECT_MASK == 0 {
-            let max = (config & MAXPOWER_MASK) >> MAXPOWER_SHIFT;
+        match config & PASELECT_MASK {
+            PASELECT_RFO => {
+                let max = (config & MAXPOWER_MASK) >> MAXPOWER_SHIFT;
 
-            let power = core::cmp::max(power, 17u8);
-            let value = power - max + 15;
+                let power = core::cmp::max(power, 17u8);
+                let value = power - max + 15;
 
-            self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value)?;
+                let v = self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value)?;
 
-        } else {
+                debug!("Updated RFO PA_CONFIG to: {:b}", v);
+            },
+            PASELECT_PA_BOOST => {
 
-            let power = core::cmp::max(power, 20u8);
-            let value = power - 17 + 15;
+                let power = core::cmp::max(power, 20u8);
+                let value = power - 17 + 15;
 
-            self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value)?;
+                self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value)?;
 
-            let pa_dac_enable = if power > 17 { PADAC_20DBM_ON } else { PADAC_20DBM_OFF };
-            self.update_reg(regs::Common::PADAC, PADAC_MASK, pa_dac_enable)?;
+                let pa_dac_enable = if power > 17 { PADAC_20DBM_ON } else { PADAC_20DBM_OFF };
+                let v = self.update_reg(regs::Common::PADAC, PADAC_MASK, pa_dac_enable)?;
+
+                debug!("Updated BOOST PA_CONFIG to: {:b}", v);
+            },
+            _ => ()
         }
 
         Ok(())
@@ -136,6 +151,8 @@ where
                 self.update_reg(regs::Common::PACONFIG, PASELECT_MASK, PASELECT_PA_BOOST)?;
             }
         }
+
+        self.set_power(config.power)?;
 
         Ok(())
     }

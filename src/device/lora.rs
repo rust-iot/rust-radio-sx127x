@@ -23,6 +23,9 @@ pub struct Config {
     /// Power amplifer output selection
     pub pa_output: PaSelect,
 
+    /// Output power in dBm
+    pub power: u8,
+
     pub invert_iq: bool,
 }
 
@@ -38,7 +41,8 @@ impl Default for Config {
             payload_len: PayloadLength::Variable,
             payload_crc: PayloadCrc::Enabled,
             frequency_hop: FrequencyHopping::Disabled,
-            pa_output: PaSelect::Rfo(0x04),
+            pa_output: PaSelect::Boost,
+            power: 10,
             invert_iq: false,
         }
     }
@@ -120,7 +124,8 @@ pub const SYMBTIMEOUTMSB_MASK: u8 = 0b0000_0011;
 
 
 pub const ACG_AUTO_ON_MASK: u8 = 0b0000_0100;
-
+pub const ACG_AUTO_ON_ENABLED: u8 = 0b0000_0100;
+pub const ACG_AUTO_ON_DISABLED: u8 = 0b0000_0000;
 
 pub const LOWDATARATEOPTIMIZE_MASK: u8 = 0b0000_1000;
 
@@ -219,5 +224,21 @@ bitflags! {
         const PREAMBLED_DETECT  = 0b0000_0010;
         /// Set when Sync and Address (if enabled) are detected
         const SYNC_ADDR_MATCH   = 0b0000_0001;
+    }
+}
+
+bitflags! {
+    ///Modem Status flags
+    pub struct ModemStatus: u8 {
+
+        const MODEM_CLEAR         = 0b0001_0000;
+
+        const HEADER_VALID        = 0b0000_1000;
+
+        const RX_ONGOING          = 0b0000_0100;
+        
+        const SIGNAL_SYNCHRONIZED = 0b0000_0010;
+
+        const SIGNAL_DETECTED     = 0b0000_0001;
     }
 }
