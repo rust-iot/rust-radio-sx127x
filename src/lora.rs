@@ -1,8 +1,7 @@
 //! LoRa RF implementation
 //! 
-
-use hal::digital::v2::{InputPin, OutputPin};
-use hal::blocking::delay::DelayMs;
+//! This module implements LoRa radio functionality
+//! 
 
 use crate::{Sx127x, Sx127xError};
 use crate::base::Hal as Sx127xHal;
@@ -176,7 +175,7 @@ where
         // TODO: support large packet sending
         assert!(data.len() < 255);
 
-        self.set_state(State::Standby)?;
+        self.set_state_checked(State::Standby)?;
 
         // Configure IQ inversion
         // TODO: seems this shouldn't be required every time?
@@ -196,11 +195,6 @@ where
         // Use whole buffer for TX
         self.write_reg(regs::LoRa::FIFOTXBASEADDR, 0x00)?;
         self.write_reg(regs::LoRa::FIFOADDRPTR, 0x00)?;
-
-        // Wake device if required
-        if self.get_state()? == State::Sleep {
-            self.set_state(State::Standby)?;
-        }
 
         // Write to the FIFO
         self.hal.buff_write(data)?;
@@ -232,7 +226,7 @@ where
 
         debug!("Starting receive");
 
-        self.set_state(State::Standby)?;
+        self.set_state_checked(State::Standby)?;
         
         // Configure IQ inversion
         // TODO: seems this shouldn't be required every time?
@@ -248,10 +242,8 @@ where
         }
         }
 
-        let bandwidth = Bandwidth::Bandwidth125kHz;
-
         // ERRATA 2.3 - Receiver Spurious Reception of a LoRa Signal
-        match bandwidth {
+        match self.config.bandwidth {
             Bandwidth125kHz => {
                 self.write_reg(regs::LoRa::TEST2F, 0x40)?;
             },
@@ -265,6 +257,9 @@ where
 
         // Use whole buffer for TX
         self.write_reg(regs::LoRa::FIFORXBASEADDR, 0x00)?;
+        self.write_reg(regs::LoRa::FIFOADDRPTR, 0x00)?;
+
+        self.hal.buff_write(&[0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])?;
         self.write_reg(regs::LoRa::FIFOADDRPTR, 0x00)?;
 
         // Set RX packet max length
@@ -301,7 +296,7 @@ where
             debug!("RX timeout");
             res = Err(Sx127xError::Timeout);
         } else   {
-            debug!("RX pending");
+            trace!("RX poll");
         }
 
         match (restart, res) {
@@ -314,11 +309,17 @@ where
         }
     }
 
-    pub fn get_received(&mut self, mut data: &mut[u8]) -> Result<u8, Sx127xError<CommsError, PinError>> {
+    pub fn get_received(&mut self, data: &mut[u8]) -> Result<u8, Sx127xError<CommsError, PinError>> {
+        // Fetch the number of bytes and current RX address pointer
         let n = self.read_reg(regs::LoRa::RXNBBYTES)?;
+        let r = self.read_reg(regs::LoRa::FIFORXCURRENTADDR)?;
 
-        debug!("FIFO RX {} bytes", n);
+        debug!("FIFO RX {} bytes with fifo rx ptr: {}", n, r);
 
+        // Update FIFO pointer to current RX address
+        self.write_reg(regs::LoRa::FIFOADDRPTR, r)?;
+
+        // Read data from FIFO
         self.hal.buff_read(&mut data[0..n as usize])?;
 
         debug!("Read data: {:?}", &data[0..n as usize]);

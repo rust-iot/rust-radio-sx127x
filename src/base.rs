@@ -1,12 +1,12 @@
 //! Basic HAL functions for communicating with the radio device
+//! This provides decoupling between embedded hal traits and the RF device implementation.
 
 use hal::blocking::delay::DelayMs;
-use hal::digital::v2::{InputPin, OutputPin};
 
 use embedded_spi::{Transactional, Reset, Busy, PinState};
 use embedded_spi::{Error as WrapError};
 
-use crate::{Sx127x, Sx127xError};
+use crate::{Sx127xError};
 
 /// Hal implementation can be generic over SPI or UART connections
 pub trait Hal<CommsError, PinError> {
@@ -81,7 +81,7 @@ where
         /// Write to the specified buffer
     fn buff_write(&mut self, data: &[u8]) -> Result<(), Sx127xError<CommsError, PinError>> {
         // Setup fifo buffer write
-        let out_buf: [u8; 1] = [ 0x00 ];
+        let out_buf: [u8; 1] = [ 0x00 | 0x80 ];
         self.wait_busy()?;
         let r = self.spi_write(&out_buf, data).map_err(|e| e.into() );
         self.wait_busy()?;

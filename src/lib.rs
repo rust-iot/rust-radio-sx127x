@@ -162,7 +162,7 @@ where
     /// Configure the modem into LoRa mode
     pub fn lora(self, lora_config: LoRaConfig) -> Result<Sx127x<Hal, CommsError, PinError, LoRaConfig>, Sx127xError<CommsError, PinError>> {
         // Destructure existing object
-        let Self{hal, settings, config, _ce, _pe} = self;
+        let Self{hal, settings, config: _, _ce, _pe} = self;
 
         // Create new object
         let mut s = Sx127x { 

@@ -80,26 +80,33 @@ pub enum Command {
 
 #[derive(StructOpt, PartialEq, Debug)]
 pub struct Transmit {
+    /// Data to be transmitted
     #[structopt(long = "data")]
     data: String,
 
+    /// Run continuously
     #[structopt(long = "continuous")]
     continuous: bool,
 
+    /// Specify period for transmission
     #[structopt(long = "period", default_value="100")]
     pub period: u32,
 }
 
 #[derive(StructOpt, PartialEq, Debug)]
 pub struct Receive {
-
+    /// Run continuously
+    #[structopt(long = "continuous")]
+    continuous: bool,
 }
 
 #[derive(StructOpt, PartialEq, Debug)]
 pub struct Rssi {
+    /// Specify period for RSSI polling
     #[structopt(long = "period", default_value="100")]
     pub period: u32,
 
+    /// Run continuously
     #[structopt(long = "continuous")]
     continuous: bool,
 }
@@ -175,13 +182,11 @@ fn main() {
                 std::thread::sleep(Duration::from_millis(config.period as u64));
             }
         },
-        Command::Receive(rx) => {
+        Command::Receive(config) => {
             radio.start_receive().expect("error starting receive");
             loop {
                 let rx = radio.check_receive(true).expect("error checking receive");
                 if rx {
-                    info!("Receive complete");
-
                     let mut buff = [0u8; 255];
                     let n = radio.get_received(&mut buff).expect("error fetching received data");
 
@@ -189,9 +194,11 @@ fn main() {
 
                     let d = std::str::from_utf8(&buff[0..n as usize]).expect("error converting response to string");
 
-                    info!("Response: '{}'", d);
+                    info!("Received: '{}'", d);
 
-                    break;
+                    if !config.continuous {
+                        break
+                    }
                 }
                 std::thread::sleep(Duration::from_millis(100));
             }
