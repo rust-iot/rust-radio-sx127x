@@ -180,6 +180,10 @@ where
 
         // Configure IQ inversion
         // TODO: seems this shouldn't be required every time?
+        // TODO: Disabled because this isn't working
+
+        #[cfg(feature="nope")]
+        {
         if self.config.invert_iq {
             self.update_reg(regs::LoRa::INVERTIQ, INVERTIQ_TX_MASK | INVERTIQ_RX_MASK, INVERTIQ_RX_OFF | INVERTIQ_TX_ON)?;
             self.write_reg(regs::LoRa::INVERTIQ2, INVERTIQ2_ON)?;
@@ -187,9 +191,7 @@ where
             self.update_reg(regs::LoRa::INVERTIQ, INVERTIQ_TX_MASK | INVERTIQ_RX_MASK, INVERTIQ_RX_OFF | INVERTIQ_TX_OFF)?;
             self.write_reg(regs::LoRa::INVERTIQ2, INVERTIQ2_OFF)?;
         }
-
-        // Set TX length
-        self.write_reg(regs::LoRa::PAYLOADLENGTH, data.len() as u8)?;
+        }
 
         // Use whole buffer for TX
         self.write_reg(regs::LoRa::FIFOTXBASEADDR, 0x00)?;
@@ -203,8 +205,11 @@ where
         // Write to the FIFO
         self.hal.buff_write(data)?;
 
+        // Set TX length
+        self.write_reg(regs::LoRa::PAYLOADLENGTH, data.len() as u8)?;
+
         // Start TX
-        self.set_state(State::Tx)?;
+        self.set_state_checked(State::Tx)?;
 
         Ok(())
     }
@@ -231,12 +236,16 @@ where
         
         // Configure IQ inversion
         // TODO: seems this shouldn't be required every time?
+        // TODO: Disabled because this isn't working
+        #[cfg(feature="nope")]
+        {
         if self.config.invert_iq {
             self.update_reg(regs::LoRa::INVERTIQ, INVERTIQ_TX_MASK | INVERTIQ_RX_MASK, INVERTIQ_RX_ON | INVERTIQ_TX_OFF)?;
             self.write_reg(regs::LoRa::INVERTIQ2, INVERTIQ2_ON)?;
         } else {
             self.update_reg(regs::LoRa::INVERTIQ, INVERTIQ_TX_MASK | INVERTIQ_RX_MASK, INVERTIQ_RX_OFF | INVERTIQ_TX_OFF)?;
             self.write_reg(regs::LoRa::INVERTIQ2, INVERTIQ2_OFF)?;
+        }
         }
 
         let bandwidth = Bandwidth::Bandwidth125kHz;
@@ -259,10 +268,10 @@ where
         self.write_reg(regs::LoRa::FIFOADDRPTR, 0x00)?;
 
         // Set RX packet max length
-        self.write_reg(regs::LoRa::PAYLOADLENGTH, 255)?;
+        self.write_reg(regs::LoRa::PAYLOADMAXLENGTH, 254)?;
 
         // Set RX mode
-        self.set_state(State::Rx)?;
+        self.set_state_checked(State::Rx)?;
 
         Ok(())
     }
@@ -292,7 +301,7 @@ where
             debug!("RX timeout");
             res = Err(Sx127xError::Timeout);
         } else   {
-            trace!("RX pending");
+            debug!("RX pending");
         }
 
         match (restart, res) {

@@ -249,6 +249,18 @@ where
         Ok(())
     }
 
+    pub fn set_state_checked(&mut self, state: State) -> Result<(), Sx127xError<CommsError, PinError>> {
+        self.set_state(state)?;
+        loop {
+            let s = self.get_state()?;
+            if state == s {
+                break;
+            }
+            self.hal.delay_ms(1);
+        }
+        Ok(())
+    }
+
     // Calculate a channel number from a given frequency
     fn freq_to_channel_index(&self, freq: u32) -> u32 {
         let step = (self.settings.xtal_freq as f32) / (2u32.pow(19) as f32);
