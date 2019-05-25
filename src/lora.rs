@@ -7,7 +7,7 @@
 use radio::{State as _, Channel as _, Power as _, Interrupts as _};
 
 use crate::{Sx127x, Error};
-use crate::base::Hal as Sx127xHal;
+use crate::base::Base as Sx127xBase;
 use crate::device::{State, Modem, regs};
 use crate::device::lora::*;
 
@@ -84,9 +84,9 @@ pub struct Info {
     pub snr: i16,
 }
 
-impl<Hal, CommsError, PinError> Sx127x<Hal, CommsError, PinError, LoRaConfig>
+impl<Base, CommsError, PinError> Sx127x<Base, CommsError, PinError, LoRaConfig>
 where
-    Hal: Sx127xHal<CommsError, PinError>,
+    Base: Sx127xBase<CommsError, PinError>,
 {
     /// Configure the radio in lora mode with the provided configuration
     pub fn configure(&mut self, config: &LoRaConfig) -> Result<(), Error<CommsError, PinError>> {
@@ -141,9 +141,9 @@ where
     }
 }
 
-impl<Hal, CommsError, PinError> radio::Interrupts for Sx127x<Hal, CommsError, PinError, LoRaConfig>
+impl<Base, CommsError, PinError> radio::Interrupts for Sx127x<Base, CommsError, PinError, LoRaConfig>
 where
-    Hal: Sx127xHal<CommsError, PinError>,
+    Base: Sx127xBase<CommsError, PinError>,
 {
     type Irq = Irq;
     type Error = Error<CommsError, PinError>;
@@ -162,9 +162,9 @@ where
     }
 }
 
-impl<Hal, CommsError, PinError> radio::Power for Sx127x<Hal, CommsError, PinError, LoRaConfig>
+impl<Base, CommsError, PinError> radio::Power for Sx127x<Base, CommsError, PinError, LoRaConfig>
 where
-    Hal: Sx127xHal<CommsError, PinError>,
+    Base: Sx127xBase<CommsError, PinError>,
 {
     type Error = Error<CommsError, PinError>;
 
@@ -211,9 +211,9 @@ where
 
 }
 
-impl<Hal, CommsError, PinError> radio::Channel for Sx127x<Hal, CommsError, PinError, LoRaConfig>
+impl<Base, CommsError, PinError> radio::Channel for Sx127x<Base, CommsError, PinError, LoRaConfig>
 where
-    Hal: Sx127xHal<CommsError, PinError>,
+    Base: Sx127xBase<CommsError, PinError>,
 {
     type Channel = Channel;
     type Error = Error<CommsError, PinError>;
@@ -284,9 +284,9 @@ where
     }
 }
 
-impl<Hal, CommsError, PinError> radio::Transmit for Sx127x<Hal, CommsError, PinError, LoRaConfig>
+impl<Base, CommsError, PinError> radio::Transmit for Sx127x<Base, CommsError, PinError, LoRaConfig>
 where
-    Hal: Sx127xHal<CommsError, PinError>,
+    Base: Sx127xBase<CommsError, PinError>,
 {
     type Error = Error<CommsError, PinError>;
 
@@ -319,7 +319,7 @@ where
         self.write_reg(regs::LoRa::FIFOADDRPTR, 0x00)?;
 
         // Write to the FIFO
-        self.hal.buff_write(data)?;
+        self.hal.write_buff(data)?;
 
         // Set TX length
         self.write_reg(regs::LoRa::PAYLOADLENGTH, data.len() as u8)?;
@@ -347,9 +347,9 @@ where
     }
 }
 
-impl<Hal, CommsError, PinError> radio::Receive for Sx127x<Hal, CommsError, PinError, LoRaConfig>
+impl<Base, CommsError, PinError> radio::Receive for Sx127x<Base, CommsError, PinError, LoRaConfig>
 where
-    Hal: Sx127xHal<CommsError, PinError>,
+    Base: Sx127xBase<CommsError, PinError>,
 {
     type Info = ();
     type Error = Error<CommsError, PinError>;
@@ -390,9 +390,6 @@ where
 
         // Use whole buffer for TX
         self.write_reg(regs::LoRa::FIFORXBASEADDR, 0x00)?;
-        self.write_reg(regs::LoRa::FIFOADDRPTR, 0x00)?;
-
-        self.hal.buff_write(&[0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff])?;
         self.write_reg(regs::LoRa::FIFOADDRPTR, 0x00)?;
 
         // Set RX packet max length
@@ -457,7 +454,7 @@ where
         self.write_reg(regs::LoRa::FIFOADDRPTR, r)?;
 
         // Read data from FIFO
-        self.hal.buff_read(&mut data[0..n])?;
+        self.hal.read_buff(&mut data[0..n])?;
 
         debug!("Read data: {:?}", &data[0..n]);
 
@@ -465,9 +462,9 @@ where
     }
 }
 
-impl<Hal, CommsError, PinError> radio::Rssi for Sx127x<Hal, CommsError, PinError, LoRaConfig>
+impl<Base, CommsError, PinError> radio::Rssi for Sx127x<Base, CommsError, PinError, LoRaConfig>
 where
-    Hal: Sx127xHal<CommsError, PinError>,
+    Base: Sx127xBase<CommsError, PinError>,
 {
     type Error = Error<CommsError, PinError>;
 

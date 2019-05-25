@@ -60,8 +60,8 @@ pub const SPI_MODE: SpiMode = SpiMode {
 /// 
 /// Operating functions are implemented as traits from the [radio] package
 /// 
-pub struct Sx127x<Hal, CommsError, PinError, Config>{
-    hal: Hal,
+pub struct Sx127x<Base, CommsError, PinError, Config>{
+    hal: Base,
 
     #[cfg(feature = "ffi")]
     c: Option<SX1276_t>,
@@ -142,12 +142,12 @@ where
 
 
 
-impl<Hal, CommsError, PinError> Sx127x<Hal, CommsError, PinError, ()>
+impl<Base, CommsError, PinError> Sx127x<Base, CommsError, PinError, ()>
 where
-    Hal: base::Hal<CommsError, PinError>,
+    Base: base::Base<CommsError, PinError>,
 {
-    /// Create a new radio instance over an arbitrary base::Hal implementation
-    pub fn new(hal: Hal, settings: Settings) -> Result<Self, Error<CommsError, PinError>> {
+    /// Create a new radio instance over an arbitrary base::Base implementation
+    pub fn new(hal: Base, settings: Settings) -> Result<Self, Error<CommsError, PinError>> {
         
 
         // Build container object
@@ -177,7 +177,7 @@ where
     }
 
     /// Configure the modem into LoRa mode
-    pub fn lora(self, lora_config: LoRaConfig) -> Result<Sx127x<Hal, CommsError, PinError, LoRaConfig>, Error<CommsError, PinError>> {
+    pub fn lora(self, lora_config: LoRaConfig) -> Result<Sx127x<Base, CommsError, PinError, LoRaConfig>, Error<CommsError, PinError>> {
         // Destructure existing object
         let Self{hal, settings, config: _, _ce, _pe} = self;
 
@@ -201,11 +201,11 @@ where
     }
 }
 
-impl<Hal, CommsError, PinError, Config> Sx127x<Hal, CommsError, PinError, Config>
+impl<Base, CommsError, PinError, Config> Sx127x<Base, CommsError, PinError, Config>
 where
-    Hal: base::Hal<CommsError, PinError>,
+    Base: base::Base<CommsError, PinError>,
 {
-    pub(crate) fn build(hal: Hal, settings: Settings, config: Config) -> Self {
+    pub(crate) fn build(hal: Base, settings: Settings, config: Config) -> Self {
         Sx127x { 
             hal, settings, config,
             #[cfg(feature = "ffi")]
@@ -218,38 +218,32 @@ where
     }
 }
 
-impl<Hal, CommsError, PinError, Config> Sx127x<Hal, CommsError, PinError, Config>
+impl<Base, CommsError, PinError, Config> Sx127x<Base, CommsError, PinError, Config>
 where
-    Hal: base::Hal<CommsError, PinError>,
+    Base: base::Base<CommsError, PinError>,
 {
     /// Read a u8 value from the specified register
     pub fn read_reg<R>(&mut self, reg: R) -> Result<u8, Error<CommsError, PinError>> 
     where R: Copy + Clone + Into<u8> {
-        let mut incoming = [0u8; 1];
-        self.hal.reg_read(reg.into(), &mut incoming)?;
-        Ok(incoming[0])
+        self.hal.read_reg(reg.into())
     }
 
     /// Write a u8 value to the specified register
     pub fn write_reg<R>(&mut self, reg: R, value: u8) -> Result<(), Error<CommsError, PinError>> 
     where R: Copy + Clone + Into<u8> {
-        self.hal.reg_write(reg.into(), &[value])?;
-        Ok(())
+        self.hal.write_reg(reg.into(), value)
     }
 
     /// Update the specified register with the provided (value & mask)
     pub fn update_reg<R>(&mut self, reg: R, mask: u8, value: u8) -> Result<u8, Error<CommsError, PinError>> 
     where R: Copy + Clone + Into<u8> {
-        let existing = self.read_reg(reg)?;
-        let updated = (existing & !mask) | (value & mask);
-        self.write_reg(reg, updated)?;
-        Ok(updated)
+        self.hal.update_reg(reg.into(), mask, value)
     }
 }
 
-impl<Hal, CommsError, PinError, Config> radio::State for Sx127x<Hal, CommsError, PinError, Config>
+impl<Base, CommsError, PinError, Config> radio::State for Sx127x<Base, CommsError, PinError, Config>
 where
-    Hal: base::Hal<CommsError, PinError>,
+    Base: base::Base<CommsError, PinError>,
 {
     type State = State;
     type Error = Error<CommsError, PinError>;
@@ -269,9 +263,9 @@ where
 
 }
 
-impl<Hal, CommsError, PinError, Config> Sx127x<Hal, CommsError, PinError, Config>
+impl<Base, CommsError, PinError, Config> Sx127x<Base, CommsError, PinError, Config>
 where
-    Hal: base::Hal<CommsError, PinError>,
+    Base: base::Base<CommsError, PinError>,
 {
         
     /// Fetch device silicon version
@@ -330,7 +324,7 @@ where
             (channel >> 0) as u8,
         ];
         
-        self.hal.reg_write(regs::Common::FRFMSB as u8, &outgoing)?;
+        self.hal.write_regs(regs::Common::FRFMSB as u8, &outgoing)?;
 
         Ok(())
     }
@@ -339,7 +333,7 @@ where
     pub (crate) fn get_frequency(&mut self) -> Result<u32, Error<CommsError, PinError>> {
         let mut incoming = [0u8; 3];
 
-        self.hal.reg_read(regs::Common::FRFMSB as u8, &mut incoming)?;
+        self.hal.read_regs(regs::Common::FRFMSB as u8, &mut incoming)?;
         let ch = (incoming[0] as u32) << 16 | (incoming[1] as u32) << 8 | (incoming[2] as u32) << 0;
 
         let freq = self.channel_index_to_freq(ch);
