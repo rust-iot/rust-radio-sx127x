@@ -1,3 +1,8 @@
+//! Sx127x command line utility
+//! 
+//! Provides mechanisms for command line interaction with Sx127x devices using linux spidev and sysfs_gpio 
+//! 
+//! Copyright 2019 Ryan Kurte
 
 use std::time::Duration;
 
@@ -12,9 +17,11 @@ extern crate linux_embedded_hal;
 use linux_embedded_hal::{spidev, Spidev, Pin as PinDev, Delay};
 use linux_embedded_hal::sysfs_gpio::Direction;
 
+extern crate radio;
+use radio::{Transmit as _, Receive as _, Rssi as _};
 
 extern crate radio_sx127x;
-use radio_sx127x::{Sx127x, Settings, LoRaConfig};
+use radio_sx127x::prelude::*;
 
 #[derive(StructOpt)]
 #[structopt(name = "Sx127x-util", about = "A Command Line Interface (CLI) for interacting with a local Sx127x radio device")]
@@ -165,9 +172,9 @@ fn main() {
         }
         Command::Transmit(config) => {
             loop {
-                radio.start_send( config.data.as_bytes() ).expect("error starting send");
+                radio.start_transmit( config.data.as_bytes() ).expect("error starting send");
                 loop {
-                    let tx = radio.check_send().expect("error checking send");
+                    let tx = radio.check_transmit().expect("error checking send");
                     if tx {
                         info!("Send complete");
                         break;
@@ -188,7 +195,7 @@ fn main() {
                 let rx = radio.check_receive(true).expect("error checking receive");
                 if rx {
                     let mut buff = [0u8; 255];
-                    let n = radio.get_received(&mut buff).expect("error fetching received data");
+                    let n = radio.get_received(&mut (), &mut buff).expect("error fetching received data");
 
                     debug!("received data: {:?}", &buff[0..n as usize]);
 

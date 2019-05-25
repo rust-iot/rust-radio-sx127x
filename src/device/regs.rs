@@ -1,5 +1,6 @@
-//! SX127x Radio Driver
-//! Copyright 2018 Ryan Kurte
+//! SX127x Register Definitions
+//! 
+//! Copyright 2019 Ryan Kurte
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Register {

@@ -1,5 +1,10 @@
-//! Sx127x Radio Driver
-//! Copyright 2018 Ryan Kurte
+//! Sx127x Rust Radio Driver
+//! 
+//! This library implements a driver for the Semtec Sx127x series of sub-GHz ISM band Radio ICs.
+//! 
+//! For use with [embedded-hal](https://github.com/rust-embedded/embedded-hal) implementations.
+//! 
+// Copyright 2018 Ryan Kurte
 
 #![no_std]
 
@@ -21,6 +26,9 @@ use hal::blocking::spi::{Transfer, Write};
 extern crate embedded_spi;
 use embedded_spi::{Error as WrapError, wrapper::Wrapper as SpiWrapper};
 
+extern crate radio;
+use radio::{State as _};
+
 #[cfg(feature = "ffi")]
 pub mod bindings;
 
@@ -34,17 +42,24 @@ pub mod ffi;
 
 pub mod device;
 use device::{State, Modem, regs};
-pub use device::lora::{Config as LoRaConfig};
 
 pub mod lora;
+use lora::LoRaConfig;
 
-/// Sx127x Spi operating mode
+pub mod fsk;
+
+pub mod prelude;
+
+/// Sx127x Spi operating mode (MODE: 0, CPOL: 0, CPHA: 0)
 pub const SPI_MODE: SpiMode = SpiMode {
     polarity: Polarity::IdleLow,
     phase: Phase::CaptureOnFirstTransition,
 };
 
 /// Sx127x device object
+/// 
+/// Operating functions are implemented as traits from the [radio] package
+/// 
 pub struct Sx127x<Hal, CommsError, PinError, Config>{
     hal: Hal,
 
@@ -52,7 +67,7 @@ pub struct Sx127x<Hal, CommsError, PinError, Config>{
     c: Option<SX1276_t>,
 
     #[cfg(feature = "ffi")]
-    err: Option<Sx127xError<CommsError, PinError>>,
+    err: Option<Error<CommsError, PinError>>,
 
     _ce: PhantomData<CommsError>,
     _pe: PhantomData<PinError>,
@@ -66,8 +81,8 @@ pub struct Sx127x<Hal, CommsError, PinError, Config>{
 /// This contains general information for either radio configuration
 #[derive(Clone, PartialEq, Debug)]
 pub struct Settings {
-    /// Radio crystal frequency
-    xtal_freq: u32,
+    /// Radio crystal frequency (defaults to 32MHz)
+    pub xtal_freq: u32,
 }
 
 impl Default for Settings {
@@ -80,7 +95,7 @@ impl Default for Settings {
 
 /// Sx127x error type
 #[derive(Debug, Clone, PartialEq)]
-pub enum Sx127xError<CommsError, PinError> {
+pub enum Error<CommsError, PinError> {
     /// Communications (SPI or UART) error
     Comms(CommsError),
     /// Pin control error
@@ -97,12 +112,12 @@ pub enum Sx127xError<CommsError, PinError> {
     InvalidDevice(u8),
 }
 
-impl <CommsError, PinError> From<WrapError<CommsError, PinError>> for Sx127xError<CommsError, PinError> {
+impl <CommsError, PinError> From<WrapError<CommsError, PinError>> for Error<CommsError, PinError> {
     fn from(e: WrapError<CommsError, PinError>) -> Self {
         match e {
-            WrapError::Spi(e) => Sx127xError::Comms(e),
-            WrapError::Pin(e) => Sx127xError::Pin(e),
-            WrapError::Aborted => Sx127xError::Aborted,
+            WrapError::Spi(e) => Error::Comms(e),
+            WrapError::Pin(e) => Error::Pin(e),
+            WrapError::Aborted => Error::Aborted,
         }
     }
 }
@@ -114,8 +129,8 @@ where
     Input: InputPin<Error = PinError>,
     Delay: delay::DelayMs<u32>,
 {
-    /// Create an Sx127x with the provided `Spi` implementation and pins
-    pub fn spi(spi: Spi, cs: Output, busy: Input, sdn: Output, delay: Delay, settings: Settings) -> Result<Self, Sx127xError<CommsError, PinError>> {
+    /// Create an Sx127x with the provided SPI implementation and pins
+    pub fn spi(spi: Spi, cs: Output, busy: Input, sdn: Output, delay: Delay, settings: Settings) -> Result<Self, Error<CommsError, PinError>> {
         // Create SpiWrapper over spi/cs/busy
         let mut hal = SpiWrapper::new(spi, cs, delay);
         hal.with_busy(busy);
@@ -131,8 +146,10 @@ impl<Hal, CommsError, PinError> Sx127x<Hal, CommsError, PinError, ()>
 where
     Hal: base::Hal<CommsError, PinError>,
 {
-    /// Create a new radio instance
-    pub fn new(hal: Hal, settings: Settings) -> Result<Self, Sx127xError<CommsError, PinError>> {
+    /// Create a new radio instance over an arbitrary base::Hal implementation
+    pub fn new(hal: Hal, settings: Settings) -> Result<Self, Error<CommsError, PinError>> {
+        
+
         // Build container object
         let mut sx127x = Self::build(hal, settings, ());
 
@@ -141,7 +158,7 @@ where
 
         let version = sx127x.silicon_version()?;
         if version != 0x12 {
-            return Err(Sx127xError::InvalidDevice(version))
+            return Err(Error::InvalidDevice(version))
         }
 
         // Calibrate RX chain
@@ -160,7 +177,7 @@ where
     }
 
     /// Configure the modem into LoRa mode
-    pub fn lora(self, lora_config: LoRaConfig) -> Result<Sx127x<Hal, CommsError, PinError, LoRaConfig>, Sx127xError<CommsError, PinError>> {
+    pub fn lora(self, lora_config: LoRaConfig) -> Result<Sx127x<Hal, CommsError, PinError, LoRaConfig>, Error<CommsError, PinError>> {
         // Destructure existing object
         let Self{hal, settings, config: _, _ce, _pe} = self;
 
@@ -188,7 +205,6 @@ impl<Hal, CommsError, PinError, Config> Sx127x<Hal, CommsError, PinError, Config
 where
     Hal: base::Hal<CommsError, PinError>,
 {
-
     pub(crate) fn build(hal: Hal, settings: Settings, config: Config) -> Self {
         Sx127x { 
             hal, settings, config,
@@ -206,9 +222,8 @@ impl<Hal, CommsError, PinError, Config> Sx127x<Hal, CommsError, PinError, Config
 where
     Hal: base::Hal<CommsError, PinError>,
 {
-
     /// Read a u8 value from the specified register
-    pub fn read_reg<R>(&mut self, reg: R) -> Result<u8, Sx127xError<CommsError, PinError>> 
+    pub fn read_reg<R>(&mut self, reg: R) -> Result<u8, Error<CommsError, PinError>> 
     where R: Copy + Clone + Into<u8> {
         let mut incoming = [0u8; 1];
         self.hal.reg_read(reg.into(), &mut incoming)?;
@@ -216,40 +231,55 @@ where
     }
 
     /// Write a u8 value to the specified register
-    pub fn write_reg<R>(&mut self, reg: R, value: u8) -> Result<(), Sx127xError<CommsError, PinError>> 
+    pub fn write_reg<R>(&mut self, reg: R, value: u8) -> Result<(), Error<CommsError, PinError>> 
     where R: Copy + Clone + Into<u8> {
         self.hal.reg_write(reg.into(), &[value])?;
         Ok(())
     }
 
     /// Update the specified register with the provided (value & mask)
-    pub fn update_reg<R>(&mut self, reg: R, mask: u8, value: u8) -> Result<u8, Sx127xError<CommsError, PinError>> 
+    pub fn update_reg<R>(&mut self, reg: R, mask: u8, value: u8) -> Result<u8, Error<CommsError, PinError>> 
     where R: Copy + Clone + Into<u8> {
         let existing = self.read_reg(reg)?;
         let updated = (existing & !mask) | (value & mask);
         self.write_reg(reg, updated)?;
         Ok(updated)
     }
+}
 
-    /// Fetch device silicon version
-    pub fn silicon_version(&mut self) -> Result<u8, Sx127xError<CommsError, PinError>> {
-        self.read_reg(regs::Common::VERSION)
-    }
+impl<Hal, CommsError, PinError, Config> radio::State for Sx127x<Hal, CommsError, PinError, Config>
+where
+    Hal: base::Hal<CommsError, PinError>,
+{
+    type State = State;
+    type Error = Error<CommsError, PinError>;
 
     /// Fetch device state
-    pub fn get_state(&mut self) -> Result<State, Sx127xError<CommsError, PinError>> {
+    fn get_state(&mut self) -> Result<Self::State, Self::Error> {
         let state = self.read_reg(regs::Common::OPMODE)?;
-        let state = State::try_from(state & device::OPMODE_STATE_MASK ).map_err(|_| Sx127xError::InvalidResponse)?;
+        let state = State::try_from(state & device::OPMODE_STATE_MASK ).map_err(|_| Error::InvalidResponse)?;
         Ok(state)
     }
 
     /// Set device state
-    pub fn set_state(&mut self, state: State) -> Result<(), Sx127xError<CommsError, PinError>> {
+    fn set_state(&mut self, state: Self::State) -> Result<(), Self::Error> {
         self.update_reg(regs::Common::OPMODE, device::OPMODE_STATE_MASK, state as u8)?;
         Ok(())
     }
 
-    pub fn set_state_checked(&mut self, state: State) -> Result<(), Sx127xError<CommsError, PinError>> {
+}
+
+impl<Hal, CommsError, PinError, Config> Sx127x<Hal, CommsError, PinError, Config>
+where
+    Hal: base::Hal<CommsError, PinError>,
+{
+        
+    /// Fetch device silicon version
+    pub fn silicon_version(&mut self) -> Result<u8, Error<CommsError, PinError>> {
+        self.read_reg(regs::Common::VERSION)
+    }
+
+    pub(crate) fn set_state_checked(&mut self, state: State) -> Result<(), Error<CommsError, PinError>> {
         self.set_state(state)?;
         loop {
             let s = self.get_state()?;
@@ -262,47 +292,20 @@ where
     }
 
     // Calculate a channel number from a given frequency
-    fn freq_to_channel_index(&self, freq: u32) -> u32 {
+    pub(crate) fn freq_to_channel_index(&self, freq: u32) -> u32 {
         let step = (self.settings.xtal_freq as f32) / (2u32.pow(19) as f32);
         let ch = (freq as f32) / step;
         ch as u32
     }
 
-    fn channel_index_to_freq(&self, ch: u32) -> u32 {
+    pub(crate) fn channel_index_to_freq(&self, ch: u32) -> u32 {
         let step = (self.settings.xtal_freq as f32) / (2u32.pow(19) as f32);
         let freq = (ch as f32) * step;
         freq as u32
     }
 
-    // Set the channel by frequency
-    pub fn set_frequency(&mut self, freq: u32) -> Result<(), Sx127xError<CommsError, PinError>> {
-        let channel = self.freq_to_channel_index(freq);
-        
-        let outgoing = [
-            (channel >> 16) as u8,
-            (channel >> 8) as u8,
-            (channel >> 0) as u8,
-        ];
-        
-        self.hal.reg_write(regs::Common::FRFMSB as u8, &outgoing)?;
-
-        Ok(())
-    }
-
-    // Fetch the current channel index
-    pub fn get_frequency(&mut self) -> Result<u32, Sx127xError<CommsError, PinError>> {
-        let mut incoming = [0u8; 3];
-
-        self.hal.reg_read(regs::Common::FRFMSB as u8, &mut incoming)?;
-        let ch = (incoming[0] as u32) << 16 | (incoming[1] as u32) << 8 | (incoming[2] as u32) << 0;
-
-        let freq = self.channel_index_to_freq(ch);
-
-        Ok(freq)
-    }
-
     /// Set operating modem for the device
-    pub fn set_modem(&mut self, modem: Modem) -> Result<(), Sx127xError<CommsError, PinError>> {
+    pub(crate) fn set_modem(&mut self, modem: Modem) -> Result<(), Error<CommsError, PinError>> {
         match modem {
             Modem::Standard => {
                 self.set_state(State::Sleep)?;
@@ -317,9 +320,37 @@ where
         Ok(())
     }
 
+    // Set the channel by frequency
+    pub (crate) fn set_frequency(&mut self, freq: u32) -> Result<(), Error<CommsError, PinError>> {
+        let channel = self.freq_to_channel_index(freq);
+        
+        let outgoing = [
+            (channel >> 16) as u8,
+            (channel >> 8) as u8,
+            (channel >> 0) as u8,
+        ];
+        
+        self.hal.reg_write(regs::Common::FRFMSB as u8, &outgoing)?;
+
+        Ok(())
+    }
+
+    // Fetch the current channel index
+    pub (crate) fn get_frequency(&mut self) -> Result<u32, Error<CommsError, PinError>> {
+        let mut incoming = [0u8; 3];
+
+        self.hal.reg_read(regs::Common::FRFMSB as u8, &mut incoming)?;
+        let ch = (incoming[0] as u32) << 16 | (incoming[1] as u32) << 8 | (incoming[2] as u32) << 0;
+
+        let freq = self.channel_index_to_freq(ch);
+
+        Ok(freq)
+    }
+
+
     /// Calibrate the device RF chain
     /// This MUST be called directly after resetting the module
-    pub fn rf_chain_calibration(&mut self) -> Result<(), Sx127xError<CommsError, PinError>> {
+    pub(crate) fn rf_chain_calibration(&mut self) -> Result<(), Error<CommsError, PinError>> {
         // Load initial PA config
         let frequency = self.get_frequency()?;
         let pa_config = self.read_reg(regs::Common::PACONFIG)?;

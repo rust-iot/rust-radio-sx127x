@@ -1,18 +1,175 @@
-//! LoRa RF implementation
+//! Sx127x LoRa mode RF implementation
 //! 
-//! This module implements LoRa radio functionality
+//! This module implements LoRa radio functionality for the Sx127x series devices
 //! 
+//! Copyright 2019 Ryan Kurte
 
-use crate::{Sx127x, Sx127xError};
+use radio::{State as _, Channel as _, Power as _, Interrupts as _};
+
+use crate::{Sx127x, Error};
 use crate::base::Hal as Sx127xHal;
 use crate::device::{State, Modem, regs};
 use crate::device::lora::*;
 
-impl<Hal, CommsError, PinError> Sx127x<Hal, CommsError, PinError, Config>
+/// LoRa Radio Configuration Object
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct LoRaConfig {
+    /// LoRa channel configuration
+    pub channel: Channel,
+    /// LoRa preamble length in symbols (defaults to 0x8)
+    /// (not that hardware adds four additional symbols)
+    pub preamble_len: u16,
+    /// TxSingle timeout value (defaults to 0x64)
+    pub symbol_timeout: u16,
+    /// Payload length configuration (defaults to Variable / Explicit header mode)
+    pub payload_len: PayloadLength,
+    /// Payload RX CRC configuration (defaults to enabled)
+    pub payload_crc: PayloadCrc,
+    /// Frequency hopping configuration (defaults to disabled)
+    pub frequency_hop: FrequencyHopping,
+    /// Power amplifier output selection (defaults to PA_BOOST output)
+    pub pa_output: PaSelect,
+    /// Output power in dBm (defaults to 10dBm)
+    pub power: u8,
+    /// IQ inversion configuration (defaults to disabled)
+    pub invert_iq: bool,
+}
+
+impl Default for LoRaConfig {
+    fn default() -> Self {
+        LoRaConfig {
+            channel: Channel::default(),
+            preamble_len: 0x8,
+            symbol_timeout: 0x64,
+            payload_len: PayloadLength::Variable,
+            payload_crc: PayloadCrc::Enabled,
+            frequency_hop: FrequencyHopping::Disabled,
+            pa_output: PaSelect::Boost,
+            power: 10,
+            invert_iq: false,
+        }
+    }
+}
+
+/// LoRa radio channel configuration
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct Channel {
+    /// LoRa frequency in Hz (defaults to 434 MHz)
+    pub frequency: u32,
+    /// LoRa channel bandwidth (defaults to 125kHz)
+    pub bandwidth: Bandwidth,
+    /// LoRa spreading factor (defaults to SF7)
+    pub sf: SpreadingFactor,
+    /// LoRa coding rate (defaults to 4/5)
+    pub coderate: Coderate,
+}
+
+impl Default for Channel {
+    fn default() -> Self {
+        Channel {
+            frequency: 434e6 as u32,
+            bandwidth: Bandwidth::Bandwidth125kHz,
+            sf: SpreadingFactor::Sf7,
+            coderate: Coderate::CodingRate1,
+        }
+    }
+}
+
+/// Received packet information
+#[derive(Clone, PartialEq, Debug)]
+pub struct Info {
+    /// Received Signal Strength Indication
+    pub rssi: i16,
+    /// Signal to Noise Ratio
+    pub snr: i16,
+}
+
+impl<Hal, CommsError, PinError> Sx127x<Hal, CommsError, PinError, LoRaConfig>
 where
     Hal: Sx127xHal<CommsError, PinError>,
 {
-    pub fn set_power(&mut self, power: u8) -> Result<(), Sx127xError<CommsError, PinError>> {
+    /// Configure the radio in lora mode with the provided configuration
+    pub fn configure(&mut self, config: &LoRaConfig) -> Result<(), Error<CommsError, PinError>> {
+        debug!("Configuring lora mode");
+
+        // Switch to sleep to change modem mode
+        self.set_state(State::Sleep)?;
+
+        // Switch to LoRa mode
+        self.set_modem(Modem::LoRa)?;
+
+        // Set channel configuration
+        self.set_channel(&config.channel)?;
+
+        // Set symbol timeout
+        self.write_reg(regs::LoRa::SYMBTIMEOUTLSB, (config.symbol_timeout & 0xFF) as u8 )?;
+
+        // Set preamble length
+        self.write_reg(regs::LoRa::PREAMBLEMSB, (config.preamble_len >> 8) as u8 )?;
+        self.write_reg(regs::LoRa::PREAMBLELSB, (config.preamble_len & 0xFF) as u8 )?;
+
+        // Set payload length if constant
+        if let PayloadLength::Constant(len) = config.payload_len {
+            debug!("Using constant length mode with length: {}", len);
+            self.write_reg(regs::LoRa::PAYLOADLENGTH, len as u8 )?;
+        }
+
+        // Configure frequency hopping if enabled
+        if let FrequencyHopping::Enabled(symbol_time) = config.frequency_hop {
+            debug!("Enabling frequency hopping with symbol time: {}", symbol_time);
+            self.update_reg(regs::Common::PLLHOP, PLLHOP_FASTHOP_MASK, PLLHOP_FASTHOP_ON)?;
+        }
+  
+        // Set output configuration
+        match config.pa_output {
+            PaSelect::Rfo(max) => {
+                self.update_reg(regs::Common::PACONFIG,
+                    PASELECT_MASK | MAXPOWER_MASK,
+                    PASELECT_RFO | ((max << MAXPOWER_SHIFT) & MAXPOWER_MASK)
+                )?;
+            },
+            PaSelect::Boost => {
+                self.update_reg(regs::Common::PACONFIG, PASELECT_MASK, PASELECT_PA_BOOST)?;
+            }
+        }
+
+        self.set_power(config.power)?;
+
+        self.config = *config;
+
+        Ok(())
+    }
+}
+
+impl<Hal, CommsError, PinError> radio::Interrupts for Sx127x<Hal, CommsError, PinError, LoRaConfig>
+where
+    Hal: Sx127xHal<CommsError, PinError>,
+{
+    type Irq = Irq;
+    type Error = Error<CommsError, PinError>;
+
+    /// Fetch pending LoRa mode interrupts from the device
+    /// If the clear option is set, this will also clear any pending flags
+    fn get_interrupts(&mut self, clear: bool) -> Result<Self::Irq, Self::Error> {
+        let reg = self.read_reg(regs::LoRa::IRQFLAGS)?;
+        let irq = Irq::from_bits(reg).unwrap();
+
+        if clear {
+            self.write_reg(regs::LoRa::IRQFLAGS, reg)?;
+        }
+
+        Ok(irq)
+    }
+}
+
+impl<Hal, CommsError, PinError> radio::Power for Sx127x<Hal, CommsError, PinError, LoRaConfig>
+where
+    Hal: Sx127xHal<CommsError, PinError>,
+{
+    type Error = Error<CommsError, PinError>;
+
+    /// Set LoRa mode transmit power
+    fn set_power(&mut self, power: u8) -> Result<(), Error<CommsError, PinError>> {
         let mut power = power;
 
         // Limit to viable input range
@@ -52,74 +209,56 @@ where
         Ok(())
     }
 
-    /// Configure the radio in lora mode with the provided configuration
-    pub fn configure(&mut self, config: &Config) -> Result<(), Sx127xError<CommsError, PinError>> {
+}
+
+impl<Hal, CommsError, PinError> radio::Channel for Sx127x<Hal, CommsError, PinError, LoRaConfig>
+where
+    Hal: Sx127xHal<CommsError, PinError>,
+{
+    type Channel = Channel;
+    type Error = Error<CommsError, PinError>;
+
+    /// Set the LoRa mode channel for future receive or transmit operations
+    fn set_channel(&mut self, channel: &Channel) -> Result<(), Error<CommsError, PinError>> {
         use device::lora::{SpreadingFactor::*, Bandwidth::*};
-
-        debug!("Configuring lora mode");
-
-        // Switch to sleep to change modem mode
-        self.set_state(State::Sleep)?;
-
-        // Switch to LoRa mode
-        self.set_modem(Modem::LoRa)?;
-
-        // Set the channel
-        self.set_frequency(config.frequency)?;
+        
+        // Set the frequency
+        self.set_frequency(channel.frequency)?;
 
         // TODO: this calculation does not encompass all configurations
-        let low_dr_optimise = if ((config.bandwidth as u8) < (Bandwidth125kHz as u8))
-                || (config.bandwidth as u8 == Bandwidth125kHz as u8 && (config.sf == Sf11 || config.sf == Sf12))
-                || (config.bandwidth as u8 == Bandwidth250kHz as u8 && config.sf == Sf12) {
+        let low_dr_optimise = if ((channel.bandwidth as u8) < (Bandwidth125kHz as u8))
+                || (channel.bandwidth as u8 == Bandwidth125kHz as u8 && (channel.sf == Sf11 || channel.sf == Sf12))
+                || (channel.bandwidth as u8 == Bandwidth250kHz as u8 && channel.sf == Sf12) {
             debug!("Using low data rate optimization");
             LowDatarateOptimise::Enabled
         } else {
             LowDatarateOptimise::Disabled
         };
 
-        let implicit_header = match config.payload_len {
+        let implicit_header = match self.config.payload_len {
             PayloadLength::Variable => IMPLICITHEADER_DISABLE,
             PayloadLength::Constant(_len) => IMPLICITHEADER_ENABLE,
         };
 
         // Set modem configuration registers
-
         self.update_reg(regs::LoRa::MODEMCONFIG1, 
             BANDWIDTH_MASK | CODERATE_MASK | IMPLICITHEADER_MASK,
-            config.bandwidth as u8 | config.coderate as u8 | implicit_header)?;
+            channel.bandwidth as u8 | channel.coderate as u8 | implicit_header)?;
 
-        let symbol_timeout_msb = (config.symbol_timeout >> 8) & 0b0011;
+        let symbol_timeout_msb = (self.config.symbol_timeout >> 8) & 0b0011;
+        let payload_crc = self.config.payload_crc;
 
         self.update_reg(regs::LoRa::MODEMCONFIG2, 
             SPREADING_FACTOR_MASK | RXPAYLOADCRC_MASK | SYMBTIMEOUTMSB_MASK,
-            config.sf as u8 | config.payload_crc as u8 | symbol_timeout_msb as u8 )?;
+            channel.sf as u8 | payload_crc as u8 | symbol_timeout_msb as u8 )?;
 
         self.update_reg(regs::LoRa::MODEMCONFIG3, 
             LOWDATARATEOPTIMIZE_MASK,
             low_dr_optimise as u8 )?;
 
-        // Set symbol timeout
-        self.write_reg(regs::LoRa::SYMBTIMEOUTLSB, (config.symbol_timeout & 0xFF) as u8 )?;
-
-        // Set preamble length
-        self.write_reg(regs::LoRa::PREAMBLEMSB, (config.preamble_len >> 8) as u8 )?;
-        self.write_reg(regs::LoRa::PREAMBLELSB, (config.preamble_len & 0xFF) as u8 )?;
-
-        // Set payload length if constant
-        if let PayloadLength::Constant(len) = config.payload_len {
-            debug!("Using constant length mode with length: {}", len);
-            self.write_reg(regs::LoRa::PAYLOADLENGTH, len as u8 )?;
-        }
-
-        // Configure frequency hopping if enabled
-        if let FrequencyHopping::Enabled(symbol_time) = config.frequency_hop {
-            debug!("Enabling frequency hopping with symbol time: {}", symbol_time);
-            self.update_reg(regs::Common::PLLHOP, PLLHOP_FASTHOP_MASK, PLLHOP_FASTHOP_ON)?;
-        }
-
         // ERRATA 2.1 - Sensitivity Optimization with a 500 kHz Bandwidth
-        if config.bandwidth == Bandwidth500kHz {
-            if config.frequency > RF_MID_BAND_THRESH {
+        if channel.bandwidth == Bandwidth500kHz {
+            if channel.frequency > RF_MID_BAND_THRESH {
                 self.write_reg(regs::LoRa::TEST36, 0x02)?;
                 self.write_reg(regs::LoRa::TEST3A, 0x64)?;
             } else {
@@ -132,44 +271,27 @@ where
 
         // Configure detection optimisation
         // TODO: should we also configure detection thresholds here..?
-        if config.sf == Sf6 {
+        if channel.sf == Sf6 {
             self.update_reg(regs::LoRa::DETECTOPTIMIZE, DETECTIONOPTIMIZE_MASK, DetectionOptimize::Sf6 as u8)?;
         } else {
             self.update_reg(regs::LoRa::DETECTOPTIMIZE, DETECTIONOPTIMIZE_MASK, DetectionOptimize::Sf7To12 as u8)?;
         }
 
-        // Set output configuration
-        match config.pa_output {
-            PaSelect::Rfo(max) => {
-                self.update_reg(regs::Common::PACONFIG,
-                    PASELECT_MASK | MAXPOWER_MASK,
-                    PASELECT_RFO | ((max << MAXPOWER_SHIFT) & MAXPOWER_MASK)
-                )?;
-            },
-            PaSelect::Boost => {
-                self.update_reg(regs::Common::PACONFIG, PASELECT_MASK, PASELECT_PA_BOOST)?;
-            }
-        }
-
-        self.set_power(config.power)?;
+        // Update internal channel state
+        self.config.channel = *channel;
 
         Ok(())
     }
+}
 
-    /// Fetch pending interrupts from the device
-    /// If the clear option is set, this will also clear any pending flags
-    pub fn get_interrupts(&mut self, clear: bool) -> Result<Irq, Sx127xError<CommsError, PinError>> {
-        let reg = self.read_reg(regs::LoRa::IRQFLAGS)?;
-        let irq = Irq::from_bits(reg).unwrap();
+impl<Hal, CommsError, PinError> radio::Transmit for Sx127x<Hal, CommsError, PinError, LoRaConfig>
+where
+    Hal: Sx127xHal<CommsError, PinError>,
+{
+    type Error = Error<CommsError, PinError>;
 
-        if clear {
-            self.write_reg(regs::LoRa::IRQFLAGS, reg)?;
-        }
-
-        Ok(irq)
-    }
-
-    pub fn start_send(&mut self, data: &[u8]) -> Result<(), Sx127xError<CommsError, PinError>> {
+    /// Start sending a packet
+    fn start_transmit(&mut self, data: &[u8]) -> Result<(), Self::Error> {
         debug!("Starting send (data: {:?})", data);
 
         // TODO: support large packet sending
@@ -208,7 +330,10 @@ where
         Ok(())
     }
 
-    pub fn check_send(&mut self) -> Result<bool, Sx127xError<CommsError, PinError>> {
+    /// Check for transmission completion
+    /// This method should be polled (or checked following and interrupt) to indicate sending
+    /// has completed
+    fn check_transmit(&mut self) -> Result<bool, Error<CommsError, PinError>> {
         let irq = self.get_interrupts(true)?;
         debug!("Poll check send, irq: {:?}", irq);
 
@@ -220,8 +345,16 @@ where
             Ok(false)
         }
     }
+}
 
-    pub fn start_receive(&mut self) -> Result<(), Sx127xError<CommsError, PinError>> {
+impl<Hal, CommsError, PinError> radio::Receive for Sx127x<Hal, CommsError, PinError, LoRaConfig>
+where
+    Hal: Sx127xHal<CommsError, PinError>,
+{
+    type Info = ();
+    type Error = Error<CommsError, PinError>;
+
+    fn start_receive(&mut self) -> Result<(), Self::Error> {
         use device::lora::Bandwidth::*;
 
         debug!("Starting receive");
@@ -243,7 +376,7 @@ where
         }
 
         // ERRATA 2.3 - Receiver Spurious Reception of a LoRa Signal
-        match self.config.bandwidth {
+        match self.config.channel.bandwidth {
             Bandwidth125kHz => {
                 self.write_reg(regs::LoRa::TEST2F, 0x40)?;
             },
@@ -276,7 +409,7 @@ where
     /// This returns true if a boolean indicating whether a packet has been received.
     /// The restart option specifies whether transient timeout or CRC errors should be 
     /// internally handled (returning Ok(false)) or passed back to the caller as errors.
-    pub fn check_receive(&mut self, restart: bool) -> Result<bool, Sx127xError<CommsError, PinError>> {
+    fn check_receive(&mut self, restart: bool) -> Result<bool, Self::Error> {
         let irq = self.get_interrupts(true)?;
         let mut res = Ok(false);
 
@@ -291,10 +424,10 @@ where
             res = Ok(true);
         } else if irq.contains(Irq::CRC_ERROR) {
             debug!("RX CRC error");
-            res = Err(Sx127xError::Crc);
+            res = Err(Error::Crc);
         } else if irq.contains(Irq::RX_TIMEOUT) {
             debug!("RX timeout");
-            res = Err(Sx127xError::Timeout);
+            res = Err(Error::Timeout);
         } else   {
             trace!("RX poll");
         }
@@ -309,9 +442,13 @@ where
         }
     }
 
-    pub fn get_received(&mut self, data: &mut[u8]) -> Result<u8, Sx127xError<CommsError, PinError>> {
+    /// Fetch a received message
+    /// 
+    /// This copies data into the provided slice, updates the provided information object,
+    ///  and returns the number of bytes received on success
+    fn get_received(&mut self, _info: &mut Self::Info, data: &mut[u8]) -> Result<usize, Self::Error> {
         // Fetch the number of bytes and current RX address pointer
-        let n = self.read_reg(regs::LoRa::RXNBBYTES)?;
+        let n = self.read_reg(regs::LoRa::RXNBBYTES)? as usize;
         let r = self.read_reg(regs::LoRa::FIFORXCURRENTADDR)?;
 
         debug!("FIFO RX {} bytes with fifo rx ptr: {}", n, r);
@@ -320,14 +457,23 @@ where
         self.write_reg(regs::LoRa::FIFOADDRPTR, r)?;
 
         // Read data from FIFO
-        self.hal.buff_read(&mut data[0..n as usize])?;
+        self.hal.buff_read(&mut data[0..n])?;
 
-        debug!("Read data: {:?}", &data[0..n as usize]);
+        debug!("Read data: {:?}", &data[0..n]);
 
         Ok(n)
     }
+}
 
-    pub fn poll_rssi(&mut self) -> Result<i16, Sx127xError<CommsError, PinError>> {
+impl<Hal, CommsError, PinError> radio::Rssi for Sx127x<Hal, CommsError, PinError, LoRaConfig>
+where
+    Hal: Sx127xHal<CommsError, PinError>,
+{
+    type Error = Error<CommsError, PinError>;
+
+    /// Poll for the current channel RSSI
+    /// This should only be called in receive mode
+    fn poll_rssi(&mut self) -> Result<i16, Error<CommsError, PinError>> {
         let raw = self.read_reg(regs::LoRa::RSSIVALUE)?;
 
         // TODO: hf/lf port switch

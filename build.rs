@@ -1,6 +1,6 @@
-//! SX128x Radio Driver
-//! Copyright 2018 Ryan Kurte
-
+//! SX128x FFI Build configuration
+//! 
+// Copyright 2018 Ryan Kurte
 
 extern crate bindgen;
 extern crate git2;

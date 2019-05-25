@@ -1,52 +1,6 @@
-
-#[derive(Clone, PartialEq, Debug)]
-pub struct Config {
-    /// LoRa channel bandwidth
-    pub bandwidth: Bandwidth,
-    /// LoRa spreading factor
-    pub sf: SpreadingFactor,
-    /// LoRa coding rate
-    pub coderate: Coderate,
-    /// LoRa channel to use (specified in Hz)
-    pub frequency: u32,
-    /// LoRa preamble length in symbols (hardware adds four additional)
-    pub preamble_len: u16,
-    /// TxSingle timeout value
-    pub symbol_timeout: u16,
-    /// Payload length configuration
-    pub payload_len: PayloadLength,
-    /// Payload RX CRC configuration
-    pub payload_crc: PayloadCrc,
-    /// Frequency hopping configuration
-    pub frequency_hop: FrequencyHopping,
-
-    /// Power amplifer output selection
-    pub pa_output: PaSelect,
-
-    /// Output power in dBm
-    pub power: u8,
-
-    pub invert_iq: bool,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            bandwidth: Bandwidth::Bandwidth125kHz,
-            sf: SpreadingFactor::Sf7,
-            coderate: Coderate::CodingRate1,
-            frequency: 434e6 as u32,
-            preamble_len: 0x8,
-            symbol_timeout: 0x64,
-            payload_len: PayloadLength::Variable,
-            payload_crc: PayloadCrc::Enabled,
-            frequency_hop: FrequencyHopping::Disabled,
-            pa_output: PaSelect::Boost,
-            power: 10,
-            invert_iq: false,
-        }
-    }
-}
+//! Sx127x LoRa mode definitions
+//! 
+//! Copyright 2019 Ryan Kurte
 
 pub const BANDWIDTH_MASK: u8 = 0b1111_0000;
 

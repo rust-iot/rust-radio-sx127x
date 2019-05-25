@@ -11,11 +11,11 @@ default = [ "util" ]
 
 [dependencies]
 libc = "0.2.42"
-embedded-hal = { version = "0.2.3", features = ["unproven"] }
-embedded-spi = "0.5.1"
 log = { version = "0.4.6" }
 bitflags = "1.0.4"
-#radio = { path = "../rust-radio" }
+embedded-hal = { version = "0.2.3", features = ["unproven"] }
+embedded-spi = "0.5.1"
+radio = "0.2.0"
 
 structopt = { version = "0.2.15", optional = true }
 linux-embedded-hal = { version = "0.2.2", optional = true }
@@ -39,8 +39,3 @@ required-features = ["util"]
 [[test]]
 name = "integration"
 path = "tests/integration.rs"
-
-[patch.crates-io]
-#embedded-hal =  { path = "../embedded-hal" }
-#embedded-hal-mock = { path = "../embedded-hal-mock" }
-#embedded-spi = { path = "../rust-embedded-spi" }

@@ -1,3 +1,6 @@
+//! Sx127x Integration testing
+//! 
+//! Copyright 2019 Ryan Kurte
 
 use std::collections::HashMap;
 

@@ -1,5 +1,8 @@
 //! Compat module implements FFI bindings to an underlying C driver instance
+//! 
 //! This is provided to enable full API access and piece-wise migration to a pure-rust driver
+//! 
+//! Copyright 2019 Ryan Kurte
 
 use embedded_spi::{Transactional, PinState, Error as WrapError};
 use embedded_spi::ffi::{Cursed, Conv};
@@ -7,7 +10,7 @@ use embedded_spi::ffi::{Cursed, Conv};
 use hal::blocking::{delay};
 use hal::digital::v2::{InputPin, OutputPin};
 
-use crate::{Sx127x, Sx127xError};
+use crate::{Sx127x, Error};
 use crate::bindings::{self as sx127x, SX1276_s};
 
 // Mark Sx127x object as cursed to forever wander the lands of ffi
@@ -61,7 +64,7 @@ where
         match r {
             Ok(_) => 0,
             Err(e) => {
-                sx127x.err = Some(Sx127xError::Pin(e));
+                sx127x.err = Some(Error::Pin(e));
                 -1
             }
         }
@@ -137,13 +140,13 @@ where
 {
 
     /// Read status register using FFI bound method
-    pub fn ffi_status(&mut self) -> Result<sx127x::RadioState_t, Sx127xError<CommsError, PinError>> {
+    pub fn ffi_status(&mut self) -> Result<sx127x::RadioState_t, Error<CommsError, PinError>> {
         let mut ctx = self.c.unwrap();
         let status = unsafe { sx127x::SX1276GetStatus(&mut ctx) };
         Ok(status)
     }
 
-    pub fn ffi_rx_chain_calibration(&mut self) -> Result<(), Sx127xError<CommsError, PinError>> {
+    pub fn ffi_rx_chain_calibration(&mut self) -> Result<(), Error<CommsError, PinError>> {
         let mut ctx = self.c.unwrap();
 
         //unsafe { sx127x::RxChainCalibration(&mut ctx) };

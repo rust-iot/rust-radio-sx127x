@@ -1,5 +1,6 @@
-//! SX127x Radio Driver
-//! Copyright 2018 Ryan Kurte
+//! SX127x general device definitions
+//! 
+// Copyright 2018 Ryan Kurte
 
 #![allow(unused)]
 
@@ -28,6 +29,8 @@ pub enum State {
     /// Lora specific channel activity detection mode
     Cad         = 0x07,
 }
+
+
 
 /// OPMODE register LowFrequencyMode bit mask
 pub const OPMODE_LF_MASK: u8 = 0b0000_1000;

@@ -1,16 +1,6 @@
-
-#[derive(Clone, PartialEq, Debug)]
-pub struct Config {
-
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Config{
-
-        }
-    }
-}
+//! Sx127x FSK mode definitions
+//! 
+//! Copyright 2019 Ryan Kurte
 
 // FSK bandwidth register values
 pub enum Bandwidth {
