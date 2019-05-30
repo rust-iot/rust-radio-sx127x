@@ -6,7 +6,7 @@ authors = ["Ryan Kurte <ryankurte@gmail.com>"]
 
 [features]
 ffi = [ ]
-util = [ "structopt", "linux-embedded-hal", "simplelog" ] 
+util = [ "structopt", "linux-embedded-hal", "simplelog", "humantime" ] 
 default = [ "util" ]
 
 [dependencies]
@@ -20,6 +20,7 @@ radio = "0.2.0"
 structopt = { version = "0.2.15", optional = true }
 linux-embedded-hal = { version = "0.2.2", optional = true }
 simplelog = { version = "0.5.3", optional = true }
+humantime = { version = "1.2.0", optional = true }
 
 
 [build-dependencies]

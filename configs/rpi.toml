@@ -5,7 +5,7 @@ baud = 1000000
 chip_select = 16
 reset = 17
 busy = 5
-ready = 20
+
 
 [radio-1]
 spi = "/dev/spidev0.1"
@@ -13,4 +13,4 @@ baud = 1000000
 chip_select = 13
 reset = 18
 busy = 8
-ready = 19
+

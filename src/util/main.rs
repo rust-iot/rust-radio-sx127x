@@ -4,8 +4,6 @@
 //! 
 //! Copyright 2019 Ryan Kurte
 
-use std::time::Duration;
-
 #[macro_use] extern crate log;
 extern crate simplelog;
 use simplelog::{TermLogger, LevelFilter};
@@ -13,18 +11,24 @@ use simplelog::{TermLogger, LevelFilter};
 extern crate structopt;
 use structopt::StructOpt;
 
+extern crate humantime;
+use humantime::Duration;
+
 extern crate linux_embedded_hal;
 use linux_embedded_hal::{spidev, Spidev, Pin as PinDev, Delay};
 use linux_embedded_hal::sysfs_gpio::Direction;
 
 extern crate radio;
-use radio::{Transmit as _, Receive as _, Rssi as _};
+use radio::{Transmit as _, Receive as _, Rssi as _, Power as _};
 
 extern crate radio_sx127x;
 use radio_sx127x::prelude::*;
 
 #[derive(StructOpt)]
-#[structopt(name = "Sx127x-util", about = "A Command Line Interface (CLI) for interacting with a local Sx127x radio device")]
+#[structopt(name = "Sx127x-util")]
+/// A Command Line Interface (CLI) for interacting with a local Sx127x radio device
+/// Configuration 1:  --spi=/dev/spidev0.0 --cs-pin 16 --rst-pin 17 --busy-pin 5
+/// Configuration 2:  --spi=/dev/spidev0.0 --cs-pin 13 --rst-pin 18 --busy-pin 8
 pub struct Options {
 
     #[structopt(subcommand)]
@@ -95,9 +99,17 @@ pub struct Transmit {
     #[structopt(long = "continuous")]
     continuous: bool,
 
+    /// Power in dBm
+    #[structopt(long = "power", default_value="13")]
+    power: u8,
+
     /// Specify period for transmission
-    #[structopt(long = "period", default_value="100")]
-    pub period: u32,
+    #[structopt(long = "period", default_value="1s")]
+    pub period: Duration,
+
+    /// Specify period for polling for device status
+    #[structopt(long = "poll-interval", default_value="1ms")]
+    poll_interval: Duration,
 }
 
 #[derive(StructOpt, PartialEq, Debug)]
@@ -105,13 +117,17 @@ pub struct Receive {
     /// Run continuously
     #[structopt(long = "continuous")]
     continuous: bool,
+
+    /// Specify period for polling for device status
+    #[structopt(long = "poll-interval", default_value="1ms")]
+    poll_interval: Duration,
 }
 
 #[derive(StructOpt, PartialEq, Debug)]
 pub struct Rssi {
     /// Specify period for RSSI polling
-    #[structopt(long = "period", default_value="100")]
-    pub period: u32,
+    #[structopt(long = "period", default_value="1s")]
+    pub period: Duration,
 
     /// Run continuously
     #[structopt(long = "continuous")]
@@ -169,8 +185,10 @@ fn main() {
         Command::SiliconVersion => {
             let version = radio.silicon_version().expect("error fetching silicon version");
             info!("Silicon version: 0x{:X}", version);
-        }
+        },
         Command::Transmit(config) => {
+            radio.set_power(config.power).expect("error setting power");
+
             loop {
                 radio.start_transmit( config.data.as_bytes() ).expect("error starting send");
                 loop {
@@ -179,14 +197,14 @@ fn main() {
                         info!("Send complete");
                         break;
                     }
-                    std::thread::sleep(Duration::from_millis(100));
+                    std::thread::sleep(*config.poll_interval);
                 }
 
                 if !config.continuous {
                     break;
                 }
 
-                std::thread::sleep(Duration::from_millis(config.period as u64));
+                std::thread::sleep(*config.period);
             }
         },
         Command::Receive(config) => {
@@ -207,7 +225,7 @@ fn main() {
                         break
                     }
                 }
-                std::thread::sleep(Duration::from_millis(100));
+                std::thread::sleep(*config.poll_interval);
             }
         },
         Command::Rssi(config) => {
@@ -217,7 +235,9 @@ fn main() {
 
                 info!("rssi: {}", rssi);
 
-                std::thread::sleep(Duration::from_millis(config.period as u64));
+                radio.check_receive(true).expect("error checking receive");
+
+                std::thread::sleep(*config.period);
 
                 if !config.continuous {
                     break
