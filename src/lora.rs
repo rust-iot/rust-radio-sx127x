@@ -173,9 +173,7 @@ where
         let mut power = power;
 
         // Limit to viable input range
-        if power > 15 {
-            power = 15;
-        }
+        let power = core::cmp::min(power, 15);
 
         // Read from config to determine PA mode
         let config = self.read_reg(regs::Common::PACONFIG)?;
@@ -184,7 +182,7 @@ where
             PASELECT_RFO => {
                 let max = (config & MAXPOWER_MASK) >> MAXPOWER_SHIFT;
 
-                let power = core::cmp::max(power, 17u8);
+                let power = core::cmp::min(power, 17u8);
                 let value = power - max + 15;
 
                 let v = self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value)?;
@@ -193,7 +191,7 @@ where
             },
             PASELECT_PA_BOOST => {
 
-                let power = core::cmp::max(power, 20u8);
+                let power = core::cmp::min(power, 20u8);
                 let value = power - 17 + 15;
 
                 self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value)?;

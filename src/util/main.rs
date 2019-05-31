@@ -27,8 +27,13 @@ use radio_sx127x::prelude::*;
 #[derive(StructOpt)]
 #[structopt(name = "Sx127x-util")]
 /// A Command Line Interface (CLI) for interacting with a local Sx127x radio device
-/// Configuration 1:  --spi=/dev/spidev0.0 --cs-pin 16 --rst-pin 17 --busy-pin 5
-/// Configuration 2:  --spi=/dev/spidev0.0 --cs-pin 13 --rst-pin 18 --busy-pin 8
+/// 
+/// Configuration 1:  --cs-pin 16 --rst-pin 17 --busy-pin 5
+/// 
+/// Configuration 2:  --cs-pin 13 --rst-pin 18 --busy-pin 8
+/// 
+/// Configuration 3:  --cs-pin 8 --rst-pin 17 --busy-pin 5
+/// 
 pub struct Options {
 
     #[structopt(subcommand)]
@@ -52,18 +57,9 @@ pub struct Options {
     #[structopt(long = "busy-pin", default_value = "5", env = "SX127X_BUSY")]
     busy: u64,
 
-    /// DIO1 pin
-    #[structopt(long = "dio1-pin", default_value = "20", env = "SX127X_DIO1")]
-    dio1: u64,
-
-    /// DIO2 pin
-    #[structopt(long = "dio2-pin", default_value = "23", env = "SX127X_DIO2")]
-    _dio2: u64,
-
     /// Baud rate setting
     #[structopt(long = "baud", default_value = "1000000", env = "SX127X_BAUD")]
     baud: u32,
-
 
     #[structopt(long = "log-level", default_value = "info")]
     /// Enable verbose logging
@@ -147,7 +143,7 @@ fn main() {
     // Connect to hardware
     let mut spi = Spidev::open(opts.spi).expect("error opening spi device");
     let mut config = spidev::SpidevOptions::new();
-    config.mode(spidev::SPI_MODE_0);
+    config.mode(spidev::SPI_MODE_0 | spidev::SPI_NO_CS);
     config.max_speed_hz(opts.baud);
     spi.configure(&config).expect("error configuring spi device");
 
@@ -164,11 +160,6 @@ fn main() {
     let busy = PinDev::new(opts.busy);
     busy.export().expect("error exporting busy pin");
     busy.set_direction(Direction::Out).expect("error setting busy pin direction");
-
-    let dio1 = PinDev::new(opts.dio1);
-    dio1.export().expect("error exporting dio1 pin");
-    dio1.set_direction(Direction::Out).expect("error setting dio1 pin direction");
-
 
     debug!("Creating radio instance");
 
@@ -246,5 +237,7 @@ fn main() {
         }
         //_ => warn!("unsuppored command: {:?}", opts.command),
     }
+
+
 
 }

@@ -1,6 +1,5 @@
 language: rust
 cache: cargo
-
 matrix:
   include:
   - env: TARGET=x86_64-unknown-linux-gnu
@@ -10,24 +9,32 @@ matrix:
     addons:
       apt:
         packages:
-          - libc6-i386
-          - libc6-dev-i386
-          - gcc-arm-linux-gnueabihf
-          - libc6-armhf-cross
-          - libc6-dev-armhf-cross
-
+        - libc6-i386
+        - libc6-dev-i386
+        - gcc-arm-linux-gnueabihf
+        - libc6-armhf-cross
+        - libc6-dev-armhf-cross
 install:
 - cargo fetch
 - rustup target add armv7-unknown-linux-gnueabihf
 - rustup component add rustfmt
-
-script: 
-  - cargo build && cargo test && cargo build --target=$TARGET --release
-
-before_deploy: 
-  - "tar -cvf target/sx128-$TARGET-$TRAVIS_TAG.tgz -C target/$TARGET/release/ sx127x-util || return 0" 
+script:
+- cargo build && cargo test && cargo build --target=$TARGET --release
+before_deploy:
+- tar -cvf target/sx127x-$TARGET-$TRAVIS_TAG.tgz -C target/$TARGET/release/ sx127x-util
 
 notifications:
   email:
     on_success: never
     on_failure: never
+deploy:
+  provider: releases
+  api_key:
+    secure: KwL6ue3wNTQiUM05SxMUNlcOnlkCHxpZIKRNmpqhdT0F27RxNIl4DD0wcrA9yD1IB2jv+ZOiXeQGgYEu5s/uYpoNul9lEk3K3UxxxnzKxKH/ByaeiPnlzymBnaN47QFcjFEk5uY8eLHdtXzk6Ku6YbmSJ4uS2WSq3+Q/hnS2od/jqGi2aYy/RBHrS7oFirpcEDYQWfBDftn8vRtVSVPrv+kdBV1qKI5GhP7nodApC3g/LJHeoXHfJo9gxf4PxyCsrFKrjWvUPVkHAq62+J2ETzWNupMYpj8t23Ip+1KxTQd2MLL2epUggTvLA6nunwI3877Trjy76b4F1Ic72GD1WbL3o4UXG/9QRfAGXfjfDnp2W52v0L9uW9URF4qmBI1NY0lceQOmaSyYSJz/4xMV6Txbx+MPoISpsgVsdieMkRFUPo9cm/Lj4+TTgbLVXl2iNZU6H9ezbkx8K0gdrqGZIUJmpsPmONl7nqSNKHHtmyE0xME6TlRDwHWnLizRe4XfoIN89Fj3IM9I6AHx96gK8T7SRWBhIyVsJmuM13E1rbmKyaamB7onBjbay2rXeeO89f2uqvRBjcdsMecH85uUw0H5DnC4mPBJE8bGHnwm3sHx25a6ZP+vBS/Dza33Nqodh3KgNDOPSEK15Vn7+zB5Z5YhERhiL81bke3NF2irSko=
+  file: target/*.tgz
+  file_glob: true
+  skip_cleanup: true
+  on:
+    tags: true
+  on:
+    repo: ryankurte/rust-radio-sx127x
