@@ -97,7 +97,7 @@ pub struct Transmit {
 
     /// Power in dBm
     #[structopt(long = "power", default_value="13")]
-    power: u8,
+    power: i8,
 
     /// Specify period for transmission
     #[structopt(long = "period", default_value="1s")]

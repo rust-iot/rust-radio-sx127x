@@ -30,7 +30,7 @@ pub struct LoRaConfig {
     /// Power amplifier output selection (defaults to PA_BOOST output)
     pub pa_output: PaSelect,
     /// Output power in dBm (defaults to 10dBm)
-    pub power: u8,
+    pub power: i8,
     /// IQ inversion configuration (defaults to disabled)
     pub invert_iq: bool,
 }
@@ -169,37 +169,35 @@ where
     type Error = Error<CommsError, PinError>;
 
     /// Set LoRa mode transmit power
-    fn set_power(&mut self, power: u8) -> Result<(), Error<CommsError, PinError>> {
-        let mut power = power;
-
+    fn set_power(&mut self, power: i8) -> Result<(), Error<CommsError, PinError>> {
         // Limit to viable input range
-        let power = core::cmp::min(power, 15);
+        let power = core::cmp::max(power, 0);
 
         // Read from config to determine PA mode
         let config = self.read_reg(regs::Common::PACONFIG)?;
 
         match config & PASELECT_MASK {
             PASELECT_RFO => {
-                let max = (config & MAXPOWER_MASK) >> MAXPOWER_SHIFT;
+                let max = ((config & MAXPOWER_MASK) >> MAXPOWER_SHIFT) as i8;
 
-                let power = core::cmp::min(power, 17u8);
+                let power = core::cmp::min(power, 17i8);
                 let value = power - max + 15;
 
-                let v = self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value)?;
+                let v = self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value as u8)?;
 
-                debug!("Updated RFO PA_CONFIG to: {:b}", v);
+                debug!("Updated RFO PA_CONFIG for: {} dBm to: {:b}", power, v);
             },
             PASELECT_PA_BOOST => {
 
-                let power = core::cmp::min(power, 20u8);
+                let power = core::cmp::min(power, 20i8);
                 let value = power - 17 + 15;
 
-                self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value)?;
+                self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value as u8)?;
 
                 let pa_dac_enable = if power > 17 { PADAC_20DBM_ON } else { PADAC_20DBM_OFF };
                 let v = self.update_reg(regs::Common::PADAC, PADAC_MASK, pa_dac_enable)?;
 
-                debug!("Updated BOOST PA_CONFIG to: {:b}", v);
+                debug!("Updated BOOST PA_CONFIG for: {} dBm to: {:b}", power, v);
             },
             _ => ()
         }
