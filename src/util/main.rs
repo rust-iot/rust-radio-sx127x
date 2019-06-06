@@ -204,13 +204,14 @@ fn main() {
                 let rx = radio.check_receive(true).expect("error checking receive");
                 if rx {
                     let mut buff = [0u8; 255];
-                    let n = radio.get_received(&mut (), &mut buff).expect("error fetching received data");
+                    let mut info = LoRaInfo::default();
+                    let n = radio.get_received(&mut info, &mut buff).expect("error fetching received data");
 
-                    debug!("received data: {:?}", &buff[0..n as usize]);
+                    info!("received data: '{:?}'", &buff[0..n as usize]);
 
                     let d = std::str::from_utf8(&buff[0..n as usize]).expect("error converting response to string");
 
-                    info!("Received: '{}'", d);
+                    info!("Received: '{}' info: {:?}", d, info);
 
                     if !config.continuous {
                         break

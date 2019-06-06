@@ -8,7 +8,7 @@ use radio::{State as _, Channel as _, Power as _, Interrupts as _};
 
 use crate::{Sx127x, Error};
 use crate::base::Base as Sx127xBase;
-use crate::device::{State, Modem, regs};
+use crate::device::{self, State, Modem, regs};
 use crate::device::lora::*;
 
 /// LoRa Radio Configuration Object
@@ -84,6 +84,15 @@ pub struct Info {
     pub snr: i16,
 }
 
+impl Default for Info {
+    fn default() -> Self {
+        Info {
+            rssi: 0,
+            snr: 0,
+        }
+    }
+}
+
 impl<Base, CommsError, PinError> Sx127x<Base, CommsError, PinError, LoRaConfig>
 where
     Base: Sx127xBase<CommsError, PinError>,
@@ -138,6 +147,32 @@ where
         self.config = *config;
 
         Ok(())
+    }
+
+    fn process_rssi_snr(&self, rssi: i16, snr: i16) -> (i16, i16) {
+        // Compute SNR
+        let snr = if snr & 0x80 != 0 {
+            -((( snr + 1 ) & 0xFF) >> 2)
+        } else {
+            (snr & 0xFF) >> 2
+        };
+       
+        // RSSI depends on SNR and operating frequency band
+        let rssi = if snr < 0 {
+            if self.config.channel.frequency > RF_MID_BAND_THRESH {
+                device::RSSI_OFFSET_HF + rssi + (rssi >> 4) + snr
+            } else {
+                device::RSSI_OFFSET_LF + rssi + (rssi >> 4) + snr
+            }
+        } else {
+            if self.config.channel.frequency > RF_MID_BAND_THRESH {
+                device::RSSI_OFFSET_HF + rssi + (rssi >> 4)
+            } else {
+                device::RSSI_OFFSET_LF + rssi + (rssi >> 4) + snr
+            }
+        };
+
+        (rssi, snr)
     }
 }
 
@@ -347,7 +382,7 @@ impl<Base, CommsError, PinError> radio::Receive for Sx127x<Base, CommsError, Pin
 where
     Base: Sx127xBase<CommsError, PinError>,
 {
-    type Info = ();
+    type Info = Info;
     type Error = Error<CommsError, PinError>;
 
     fn start_receive(&mut self) -> Result<(), Self::Error> {
@@ -439,10 +474,17 @@ where
     /// 
     /// This copies data into the provided slice, updates the provided information object,
     ///  and returns the number of bytes received on success
-    fn get_received(&mut self, _info: &mut Self::Info, data: &mut[u8]) -> Result<usize, Self::Error> {
+    fn get_received(&mut self, info: &mut Self::Info, data: &mut[u8]) -> Result<usize, Self::Error> {
         // Fetch the number of bytes and current RX address pointer
         let n = self.read_reg(regs::LoRa::RXNBBYTES)? as usize;
         let r = self.read_reg(regs::LoRa::FIFORXCURRENTADDR)?;
+
+        let rssi = self.read_reg(regs::LoRa::PKTRSSIVALUE)? as i16;
+        let snr = self.read_reg(regs::LoRa::PKTSNRVALUE)? as i16;
+
+        let (rssi, snr) = self.process_rssi_snr(rssi, snr);
+        info.rssi = rssi;
+        info.snr = snr;
 
         debug!("FIFO RX {} bytes with fifo rx ptr: {}", n, r);
 
@@ -456,6 +498,8 @@ where
 
         Ok(n)
     }
+
+
 }
 
 impl<Base, CommsError, PinError> radio::Rssi for Sx127x<Base, CommsError, PinError, LoRaConfig>
