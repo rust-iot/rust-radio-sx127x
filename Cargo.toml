@@ -1,11 +1,11 @@
 [package]
 name = "radio-sx127x"
 description = "Rust driver for the Semtec SX127x Sub GHZ LoRa Radio ICs"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Ryan Kurte <ryankurte@gmail.com>"]
+license = "MPL-2.0"
 
 [features]
-ffi = [ ]
 util = [ "structopt", "linux-embedded-hal", "simplelog", "humantime" ] 
 default = [ "util" ]
 
@@ -21,13 +21,6 @@ structopt = { version = "0.2.15", optional = true }
 linux-embedded-hal = { version = "0.2.2", optional = true }
 simplelog = { version = "0.5.3", optional = true }
 humantime = { version = "1.2.0", optional = true }
-
-
-[build-dependencies]
-bindgen = "0.47.0"
-cc = { version = "1.0" }
-git2 = { version = "0.8.0" }
-build-helper = "0.1.1"
 
 [dev-dependencies]
 color-backtrace = "0.1.3"
