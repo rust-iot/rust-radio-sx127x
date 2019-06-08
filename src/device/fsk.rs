@@ -3,6 +3,7 @@
 //! Copyright 2019 Ryan Kurte
 
 // FSK bandwidth register values
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Bandwidth {
     Bandwidth2600 = 0x17,
     Bandwidth3100 = 0x0F,
@@ -32,7 +33,7 @@ pub const OPMODE_LRMODE_MASK: u8 = 0x80;
 
 pub const OPMODE_SHAPING_MASK: u8 = 0b0001_1000;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Shaping {
     Shaping00 = 0x00,
     Shaping01 = 0x08,
@@ -43,7 +44,7 @@ pub enum Shaping {
 pub const OPMODE_MODULATION_MASK: u8 = 0b0010_0000;
 
 /// Modulation modes for the standard modem
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Modulation {
     /// Frequency Shift Keying
     Fsk = 0x00,

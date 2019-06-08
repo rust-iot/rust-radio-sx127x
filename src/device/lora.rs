@@ -5,7 +5,7 @@
 pub const BANDWIDTH_MASK: u8 = 0b1111_0000;
 
 /// LoRa channel bandwidth in kHz
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Bandwidth {
     /// 62.5kHz bandwidth
     //Bandwidth62_5kHz = 0b0110_0000,
@@ -20,7 +20,7 @@ pub enum Bandwidth {
 pub const SPREADING_FACTOR_MASK: u8 = 0b1111_0000;
 
 /// LoRa spreading factor in chips / symbol
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum SpreadingFactor {
     /// Sf6: 64 chips / symbol
     Sf6 = 0b0110_0000, 
@@ -40,7 +40,7 @@ pub enum SpreadingFactor {
 
 pub const CODERATE_MASK: u8 = 0b0000_1110;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Coderate {
     /// 4/5
     CodingRate1 = 0b0000_0010,
@@ -57,7 +57,7 @@ pub const IMPLICITHEADER_ENABLE:  u8 = 0b0000_0001;
 pub const IMPLICITHEADER_DISABLE: u8 = 0b0000_0000;
 
 /// Payload length configuration
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum PayloadLength {
     /// Constant length payloads use implicit headers
     Constant(u16),
@@ -68,7 +68,7 @@ pub enum PayloadLength {
 pub const RXPAYLOADCRC_MASK: u8 = 0b0000_0100;
 
 /// Payload RX CRC configuration
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum PayloadCrc {
     Disabled = 0x00,
     Enabled  = 0x04,
@@ -84,7 +84,7 @@ pub const ACG_AUTO_ON_DISABLED: u8 = 0b0000_0000;
 pub const LOWDATARATEOPTIMIZE_MASK: u8 = 0b0000_1000;
 
 /// Low datarate optimization state
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum LowDatarateOptimise {
     /// Low datarate optimizations disabled
     Disabled = 0x00,
@@ -97,7 +97,7 @@ pub const PLLHOP_FASTHOP_ON:   u8 = 0b1000_0000;
 pub const PLLHOP_FASTHOP_OFF:   u8 = 0b0000_0000;
 
 /// Frequency hopping configuration
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum FrequencyHopping {
     Disabled,
     /// Enabled specifies the number of symbol periods between frequency hops
@@ -114,7 +114,7 @@ pub const AUTOMATICIF_OFF: u8 = 0b0000_0000;
 
 
 /// LoRa detection optimization mode
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum DetectionOptimize {
     /// Optimised for Sf7 to Sf12
     Sf7To12 = 0x03,
@@ -138,7 +138,7 @@ pub const PASELECT_RFO:      u8 = 0b0000_0000;
 pub const PASELECT_PA_BOOST: u8 = 0b1000_0000;
 
 /// Select the power amplifier output configuration
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum PaSelect {
     /// RFO pin, output power limited to +14dBm
     /// with specified maximum output value, defaults to 0x04 for 14dBm output

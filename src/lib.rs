@@ -13,6 +13,8 @@ extern crate libc;
 extern crate bitflags;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate serde;
 
 use core::convert::TryFrom;
 use core::marker::PhantomData;
