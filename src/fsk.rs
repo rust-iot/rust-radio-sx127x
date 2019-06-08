@@ -5,7 +5,7 @@
 //! Copyright 2019 Ryan Kurte
 
 /// FSK and OOK mode configuration
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Config {
     //TODO: implement this
 }

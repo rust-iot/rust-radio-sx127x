@@ -12,7 +12,7 @@ use crate::device::{self, State, Modem, regs};
 use crate::device::lora::*;
 
 /// LoRa Radio Configuration Object
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct LoRaConfig {
     /// LoRa channel configuration
     pub channel: Channel,
@@ -52,7 +52,7 @@ impl Default for LoRaConfig {
 }
 
 /// LoRa radio channel configuration
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Channel {
     /// LoRa frequency in Hz (defaults to 434 MHz)
     pub frequency: u32,
@@ -76,7 +76,7 @@ impl Default for Channel {
 }
 
 /// Received packet information
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Info {
     /// Received Signal Strength Indication
     pub rssi: i16,
