@@ -4,6 +4,8 @@
 //! 
 //! Copyright 2019 Ryan Kurte
 
+use std::time::Duration;
+
 #[macro_use] extern crate log;
 extern crate simplelog;
 use simplelog::{TermLogger, LevelFilter};
@@ -12,14 +14,14 @@ extern crate structopt;
 use structopt::StructOpt;
 
 extern crate humantime;
-use humantime::Duration;
+use humantime::{Duration as HumanDuration};
 
 extern crate linux_embedded_hal;
 use linux_embedded_hal::{spidev, Spidev, Pin as PinDev, Delay};
 use linux_embedded_hal::sysfs_gpio::Direction;
 
 extern crate radio;
-use radio::{Transmit as _, Receive as _, Rssi as _, Power as _};
+use radio::{Receive as _, Rssi as _};
 
 extern crate radio_sx127x;
 use radio_sx127x::prelude::*;
@@ -83,6 +85,10 @@ pub enum Command {
     #[structopt(name="rssi")]
     /// Poll for RSSI on the specified channel
     Rssi(Rssi),
+
+    #[structopt(name="repeat")]
+    /// Repeat received messages
+    Repeat(Repeat),
 }
 
 #[derive(StructOpt, PartialEq, Debug)]
@@ -101,11 +107,11 @@ pub struct Transmit {
 
     /// Specify period for transmission
     #[structopt(long = "period", default_value="1s")]
-    pub period: Duration,
+    period: HumanDuration,
 
     /// Specify period for polling for device status
     #[structopt(long = "poll-interval", default_value="1ms")]
-    poll_interval: Duration,
+    poll_interval: HumanDuration,
 }
 
 #[derive(StructOpt, PartialEq, Debug)]
@@ -116,18 +122,41 @@ pub struct Receive {
 
     /// Specify period for polling for device status
     #[structopt(long = "poll-interval", default_value="1ms")]
-    poll_interval: Duration,
+    poll_interval: HumanDuration,
 }
 
 #[derive(StructOpt, PartialEq, Debug)]
 pub struct Rssi {
     /// Specify period for RSSI polling
     #[structopt(long = "period", default_value="1s")]
-    pub period: Duration,
+    period: HumanDuration,
 
     /// Run continuously
     #[structopt(long = "continuous")]
     continuous: bool,
+}
+
+#[derive(StructOpt, PartialEq, Debug)]
+pub struct Repeat {
+    /// Run continuously
+    #[structopt(long = "continuous")]
+    continuous: bool,
+    
+    /// Power in dBm
+    #[structopt(long = "power", default_value="13")]
+    power: i8,
+
+    /// Specify period for polling for device status
+    #[structopt(long = "poll-interval", default_value="1ms")]
+    poll_interval: HumanDuration,
+
+    /// Specify delay for response message
+    #[structopt(long = "delay", default_value="100ms")]
+    delay: HumanDuration,
+
+    /// Append RSSI and LQI to repeated message
+    #[structopt(long = "append-info")]
+    append_info: bool,
 }
 
 
@@ -178,67 +207,138 @@ fn main() {
             info!("Silicon version: 0x{:X}", version);
         },
         Command::Transmit(config) => {
-            radio.set_power(config.power).expect("error setting power");
-
-            loop {
-                radio.start_transmit( config.data.as_bytes() ).expect("error starting send");
-                loop {
-                    let tx = radio.check_transmit().expect("error checking send");
-                    if tx {
-                        info!("Send complete");
-                        break;
-                    }
-                    std::thread::sleep(*config.poll_interval);
-                }
-
-                if !config.continuous {
-                    break;
-                }
-
-                std::thread::sleep(*config.period);
-            }
+            do_transmit(radio, config.data.as_bytes(), config.power, config.continuous, *config.period, *config.poll_interval)
+                .expect("Transmit error")
         },
         Command::Receive(config) => {
-            radio.start_receive().expect("error starting receive");
-            loop {
-                let rx = radio.check_receive(true).expect("error checking receive");
-                if rx {
-                    let mut buff = [0u8; 255];
-                    let mut info = LoRaInfo::default();
-                    let n = radio.get_received(&mut info, &mut buff).expect("error fetching received data");
+            let mut buff = [0u8; 255];
+            let mut info = LoRaInfo::default();
 
-                    info!("received data: '{:?}'", &buff[0..n as usize]);
-
-                    let d = std::str::from_utf8(&buff[0..n as usize]).expect("error converting response to string");
-
-                    info!("Received: '{}' info: {:?}", d, info);
-
-                    if !config.continuous {
-                        break
-                    }
-                }
-                std::thread::sleep(*config.poll_interval);
-            }
+            do_receive(radio, &mut buff, &mut info, config.continuous, *config.poll_interval)
+                .expect("Receive error");
         },
-        Command::Rssi(config) => {
-            radio.start_receive().expect("error starting receive");
-            loop {
-                let rssi = radio.poll_rssi().expect("error fetching RSSI");
+        Command::Repeat(config) => {
+            let mut buff = [0u8; 255];
+            let mut info = LoRaInfo::default();
 
-                info!("rssi: {}", rssi);
-
-                radio.check_receive(true).expect("error checking receive");
-
-                std::thread::sleep(*config.period);
-
-                if !config.continuous {
-                    break
-                }
-            }
+            do_repeat(radio, &mut buff, &mut info, config.power, config.continuous, *config.delay, *config.poll_interval)
+                .expect("Repeat error");
         }
+        Command::Rssi(config) => {
+            do_rssi(radio, config.continuous, *config.period)
+                .expect("RSSI error");
+        },
         //_ => warn!("unsuppored command: {:?}", opts.command),
     }
+}
 
+fn do_transmit<T, E>(mut radio: T, data: &[u8], power: i8, continuous: bool, period: Duration, poll_interval: Duration) -> Result<(), E> 
+where
+    T: radio::Transmit<Error=E> + radio::Power<Error=E>
+{
+    radio.set_power(power)?;
 
+    loop {
+        radio.start_transmit(data)?;
+        loop {
+            if radio.check_transmit()? {
+                debug!("Send complete");
+                break;
+            }
+            std::thread::sleep(poll_interval);
+        }
 
+        if !continuous {  break; }
+        std::thread::sleep(period);
+    }
+
+    Ok(())
+}
+
+fn do_receive<T, I, E>(mut radio: T, mut buff: &mut [u8], mut info: &mut I, continuous: bool, poll_interval: Duration) -> Result<usize, E> 
+where
+    T: radio::Receive<Info=I, Error=E>,
+    I: std::fmt::Debug,
+{
+    // Start receive mode
+    radio.start_receive()?;
+
+    loop {
+        if radio.check_receive(true)? {
+            let n = radio.get_received(&mut info, &mut buff)?;
+
+            match std::str::from_utf8(&buff[0..n as usize]) {
+                Ok(s) => info!("Received: '{}' info: {:?}", s, info),
+                Err(_) => info!("Received: '{:?}' info: {:?}", &buff[0..n as usize], info),
+            }
+            
+            if !continuous { return Ok(n) }
+        }
+
+        std::thread::sleep(poll_interval);
+    }
+}
+
+fn do_rssi<T, I, E>(mut radio: T, continuous: bool, period: Duration) -> Result<(), E> 
+where
+    T: radio::Receive<Info=I, Error=E> + radio::Rssi<Error=E>,
+    I: std::fmt::Debug,
+{
+    // Enter receive mode
+    radio.start_receive()?;
+
+    // Poll for RSSI
+    loop {
+        let rssi = radio.poll_rssi()?;
+
+        info!("rssi: {}", rssi);
+
+        radio.check_receive(true)?;
+
+        std::thread::sleep(period);
+
+        if !continuous {
+            break
+        }
+    }
+
+    Ok(())
+}
+
+fn do_repeat<T, I, E>(mut radio: T, mut buff: &mut [u8], mut info: &mut I, power: i8, continuous: bool, delay: Duration, poll_interval: Duration) -> Result<usize, E> 
+where
+    T: radio::Receive<Info=I, Error=E> + radio::Transmit<Error=E> + radio::Power<Error=E>,
+    I: std::fmt::Debug,
+{
+    // Set TX power
+    radio.set_power(power)?;
+
+    // Start receive mode
+    radio.start_receive()?;
+
+    loop {
+        if radio.check_receive(true)? {
+            let n = radio.get_received(&mut info, &mut buff)?;
+
+            match std::str::from_utf8(&buff[0..n as usize]) {
+                Ok(s) => info!("Received: '{}' info: {:?}", s, info),
+                Err(_) => info!("Received: '{:?}' info: {:?}", &buff[0..n as usize], info),
+            }
+
+            std::thread::sleep(delay);
+
+            radio.start_transmit(&buff[..n])?;
+            loop {
+                if radio.check_transmit()? {
+                    debug!("Send complete");
+                    break;
+                }
+                std::thread::sleep(poll_interval);
+            }
+            
+            if !continuous { return Ok(n) }
+        }
+
+        std::thread::sleep(poll_interval);
+    }
 }

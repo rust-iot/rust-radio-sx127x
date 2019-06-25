@@ -21,7 +21,7 @@ install:
 script:
 - cargo build && cargo test && cargo build --target=$TARGET --release
 before_deploy:
-- tar -cvf target/sx127x-$TARGET-$TRAVIS_TAG.tgz -C target/$TARGET/release/ sx127x-util
+- tar -cvf target/sx127x-util-$TARGET-$TRAVIS_TAG.tgz -C target/$TARGET/release/ sx127x-util
 
 notifications:
   email:
