@@ -1,0 +1,29 @@
+name: sx127x-util
+base: core18
+version: git
+
+summary: Semtec SX127x Radio IC utility
+description: |
+  A utility for testing and interacting with Semtech SX127x series
+  Sub-GHz Radio ICs
+
+architectures:
+  - build-on: amd64
+  - build-on: i386
+  - build-on: armhf
+
+grade: devel
+confinement: strict
+
+apps:
+  sx127x-util:
+    command: bin/sx127x-util
+    plugs:
+    - gpio
+    - spi
+
+parts:
+  util:
+    source: .
+    plugin: rust
+
