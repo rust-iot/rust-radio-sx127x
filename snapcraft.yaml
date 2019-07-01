@@ -15,6 +15,9 @@ architectures:
 grade: devel
 confinement: strict
 
+environment:
+  RUSTUP_USE_CURL: 1
+
 apps:
   sx127x-util:
     command: bin/sx127x-util
