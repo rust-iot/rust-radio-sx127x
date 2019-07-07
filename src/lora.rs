@@ -152,24 +152,25 @@ where
     fn process_rssi_snr(&self, rssi: i16, snr: i16) -> (i16, i16) {
         // Compute SNR
         let snr = if snr & 0x80 != 0 {
-            -((( snr + 1 ) & 0xFF) >> 2)
+            // Invert and divide by four
+            -((( !snr + 1 ) & 0xFF) >> 2)
         } else {
+            // Divide by four
             (snr & 0xFF) >> 2
         };
        
-        // RSSI depends on SNR and operating frequency band
-        let rssi = if snr < 0 {
-            if self.config.channel.frequency > RF_MID_BAND_THRESH {
-                device::RSSI_OFFSET_HF + rssi + (rssi >> 4) + snr
-            } else {
-                device::RSSI_OFFSET_LF + rssi + (rssi >> 4) + snr
-            }
+        // Select RSSI offset by band
+        let offset = if self.config.channel.frequency > RF_MID_BAND_THRESH {
+            device::RSSI_OFFSET_HF
         } else {
-            if self.config.channel.frequency > RF_MID_BAND_THRESH {
-                device::RSSI_OFFSET_HF + rssi + (rssi >> 4)
-            } else {
-                device::RSSI_OFFSET_LF + rssi + (rssi >> 4) + snr
-            }
+            device::RSSI_OFFSET_LF
+        };
+
+        // Calculate RSSI, depends on SNR
+        let rssi = if snr < 0 {
+            offset + rssi + (rssi >> 4) + snr
+        } else {
+            offset + rssi + (rssi >> 4)
         };
 
         (rssi, snr)
