@@ -21,7 +21,7 @@ fn integration() {
     // Fetch configuration file name
     let config_file = match std::env::var("SX127x_TEST_CONFIG") {
         Ok(v) => v,
-        Err(_e) => "./configs/pi-ci-sx127x.yml".to_owned(),
+        Err(_e) => "configs/pi-ci-sx127x.toml".to_owned(),
     };
 
     println!("Using configuration file: {}", config_file);
