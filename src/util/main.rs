@@ -21,7 +21,6 @@ use linux_embedded_hal::{spidev, Spidev, Pin as PinDev, Delay};
 use linux_embedded_hal::sysfs_gpio::Direction;
 
 extern crate radio;
-use radio::{Receive as _, Rssi as _};
 
 extern crate radio_sx127x;
 use radio_sx127x::prelude::*;

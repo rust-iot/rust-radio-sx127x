@@ -2,19 +2,22 @@
 //! 
 //! Copyright 2019 Ryan Kurte
 
+
+
 pub const BANDWIDTH_MASK: u8 = 0b1111_0000;
 
 /// LoRa channel bandwidth in kHz
+#[allow(non_snake_case)]
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Bandwidth {
     /// 62.5kHz bandwidth
     //Bandwidth62_5kHz = 0b0110_0000,
     /// 125kHz bandwidth
-    Bandwidth125kHz  = 0b0111_0000,
+    Bw125kHz  = 0b0111_0000,
     /// 250kHz bandwidth
-    Bandwidth250kHz  = 0b1000_0000,
+    Bw250kHz  = 0b1000_0000,
     /// 500kHz bandwidth
-    Bandwidth500kHz  = 0b1001_0000,
+    Bw500kHz  = 0b1001_0000,
 }
 
 pub const SPREADING_FACTOR_MASK: u8 = 0b1111_0000;
@@ -41,15 +44,15 @@ pub enum SpreadingFactor {
 pub const CODERATE_MASK: u8 = 0b0000_1110;
 
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub enum Coderate {
-    /// 4/5
-    CodingRate1 = 0b0000_0010,
-    /// 4/6
-    CodingRate2 = 0b0000_0100,
-    /// 4/7
-    CodingRate3 = 0b0000_0110,
-    /// 4/8
-    CodingRate4 = 0b0000_1000,
+pub enum CodingRate {
+    /// LoRa Coding rate 4/5
+    Cr4_5 = 0b0000_0010,
+    /// LoRa Coding rate 4/6
+    Cr4_6 = 0b0000_0100,
+    /// LoRa Coding rate 4/7
+    Cr4_7 = 0b0000_0110,
+    /// LoRa Coding rate 4/8
+    Cr4_8 = 0b0000_1000,
 }
 
 pub const IMPLICITHEADER_MASK:    u8 = 0b0000_0001;

@@ -55,22 +55,22 @@ impl Default for LoRaConfig {
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Channel {
     /// LoRa frequency in Hz (defaults to 434 MHz)
-    pub frequency: u32,
+    pub freq: u32,
     /// LoRa channel bandwidth (defaults to 125kHz)
-    pub bandwidth: Bandwidth,
+    pub bw: Bandwidth,
     /// LoRa spreading factor (defaults to SF7)
     pub sf: SpreadingFactor,
     /// LoRa coding rate (defaults to 4/5)
-    pub coderate: Coderate,
+    pub cr: CodingRate,
 }
 
 impl Default for Channel {
     fn default() -> Self {
         Channel {
-            frequency: 434e6 as u32,
-            bandwidth: Bandwidth::Bandwidth125kHz,
+            freq: 434e6 as u32,
+            bw: Bandwidth::Bw125kHz,
             sf: SpreadingFactor::Sf7,
-            coderate: Coderate::CodingRate1,
+            cr: CodingRate::Cr4_5,
         }
     }
 }
@@ -160,7 +160,7 @@ where
         };
        
         // Select RSSI offset by band
-        let offset = if self.config.channel.frequency > RF_MID_BAND_THRESH {
+        let offset = if self.config.channel.freq > RF_MID_BAND_THRESH {
             device::RSSI_OFFSET_HF
         } else {
             device::RSSI_OFFSET_LF
@@ -255,12 +255,12 @@ where
         use device::lora::{SpreadingFactor::*, Bandwidth::*};
         
         // Set the frequency
-        self.set_frequency(channel.frequency)?;
+        self.set_frequency(channel.freq)?;
 
         // TODO: this calculation does not encompass all configurations
-        let low_dr_optimise = if ((channel.bandwidth as u8) < (Bandwidth125kHz as u8))
-                || (channel.bandwidth as u8 == Bandwidth125kHz as u8 && (channel.sf == Sf11 || channel.sf == Sf12))
-                || (channel.bandwidth as u8 == Bandwidth250kHz as u8 && channel.sf == Sf12) {
+        let low_dr_optimise = if ((channel.bw as u8) < (Bw125kHz as u8))
+                || (channel.bw as u8 == Bw125kHz as u8 && (channel.sf == Sf11 || channel.sf == Sf12))
+                || (channel.bw as u8 == Bw250kHz as u8 && channel.sf == Sf12) {
             debug!("Using low data rate optimization");
             LowDatarateOptimise::Enabled
         } else {
@@ -275,7 +275,7 @@ where
         // Set modem configuration registers
         self.update_reg(regs::LoRa::MODEMCONFIG1, 
             BANDWIDTH_MASK | CODERATE_MASK | IMPLICITHEADER_MASK,
-            channel.bandwidth as u8 | channel.coderate as u8 | implicit_header)?;
+            channel.bw as u8 | channel.cr as u8 | implicit_header)?;
 
         let symbol_timeout_msb = (self.config.symbol_timeout >> 8) & 0b0011;
         let payload_crc = self.config.payload_crc;
@@ -289,8 +289,8 @@ where
             low_dr_optimise as u8 )?;
 
         // ERRATA 2.1 - Sensitivity Optimization with a 500 kHz Bandwidth
-        if channel.bandwidth == Bandwidth500kHz {
-            if channel.frequency > RF_MID_BAND_THRESH {
+        if channel.bw == Bw500kHz {
+            if channel.freq > RF_MID_BAND_THRESH {
                 self.write_reg(regs::LoRa::TEST36, 0x02)?;
                 self.write_reg(regs::LoRa::TEST3A, 0x64)?;
             } else {
@@ -408,11 +408,11 @@ where
         }
 
         // ERRATA 2.3 - Receiver Spurious Reception of a LoRa Signal
-        match self.config.channel.bandwidth {
-            Bandwidth125kHz => {
+        match self.config.channel.bw {
+            Bw125kHz => {
                 self.write_reg(regs::LoRa::TEST2F, 0x40)?;
             },
-            Bandwidth250kHz => {
+            Bw250kHz => {
                 self.write_reg(regs::LoRa::TEST2F, 0x40)?;
             },
             _ => {
