@@ -110,6 +110,8 @@ pub enum Error<CommsError, PinError> {
     Timeout,
     /// incoming packet CRC error
     Crc,
+    /// Received packet exceeds buffer size
+    BufferSize,
     /// Invalid or unrecognised device
     InvalidDevice(u8),
 }

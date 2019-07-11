@@ -492,6 +492,11 @@ where
         // Update FIFO pointer to current RX address
         self.write_reg(regs::LoRa::FIFOADDRPTR, r)?;
 
+        if n > data.len() {
+            error!("received packet size exceeds buffer size (n: {}, r: {}, max: {})", n, r, data.len());
+            return Err(Error::BufferSize);
+        }
+
         // Read data from FIFO
         self.hal.read_buff(&mut data[0..n])?;
 
