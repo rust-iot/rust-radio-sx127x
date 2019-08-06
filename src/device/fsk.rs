@@ -37,6 +37,11 @@ impl Default for FskChannel {
     }
 }
 
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct FskInfo {
+
+}
+
 // FSK bandwidth register values
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Bandwidth {

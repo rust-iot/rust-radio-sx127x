@@ -43,6 +43,20 @@ pub struct Config {
 
     /// Device power amplifier configuration
     pub pa_config: PaConfig,
+
+    /// Device crystal frequency (defaults to 32MHz)
+    pub xtal_freq: u32,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            modem: Modem::None,
+            channel: Channel::None,
+            pa_config: PaConfig::default(),
+            xtal_freq: 32000000,
+        }
+    }
 }
 
 /// Sx127x Power Amplifier (PA) configuration
@@ -54,17 +68,34 @@ pub struct PaConfig {
     pub power: i8,
 }
 
+impl Default for PaConfig {
+    fn default() -> PaConfig {
+        Self {
+            output: PaSelect::Boost,
+            power: 10,
+        }
+    }
+}
+
 /// Modem configuration contains constants for each modem mode
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Modem {
+    /// Modem not configured
+    None,
+    /// Modem configured in LoRa mode
     LoRa(LoRaConfig),
+    /// Modem configured in Standard (FSK/OOK) mode
     FskOok(FskConfig),
 }
 
 /// Channel configuration contains channel options for each mode
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Channel {
+    /// Channel not configured
+    None,
+    /// Channel configured in LoRa mode
     LoRa(LoRaChannel),
+    /// Channel configured in Standard (FSK/OOK) mode
     FskOok(FskChannel),
 }
 

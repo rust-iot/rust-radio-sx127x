@@ -10,7 +10,7 @@ extern crate embedded_spi;
 use embedded_spi::utils::{DeviceConfig, load_config};
 
 extern crate radio_sx127x;
-use radio_sx127x::{Sx127x, Settings, lora::Info, lora::LoRaConfig};
+use radio_sx127x::prelude::*;
 
 extern crate radio;
 use radio::{Receive, Transmit};
@@ -34,13 +34,11 @@ fn integration() {
     
     let (w1, w2) = (config1.load(), config2.load());
 
-    let settings1 = Settings::default();
-    let radio1 = Sx127x::new(w1, settings1).expect("error creating radio1");
-    let mut radio1 = radio1.lora(LoRaConfig::default()).unwrap();
+    let radio1 = Sx127x::new(w1).expect("error creating radio1");
+    let mut radio1 = radio1.lora(&LoRaConfig::default(), &LoRaChannel::default()).unwrap();
 
-    let settings2 = Settings::default();
-    let radio2 = Sx127x::new(w2, settings2).expect("error creating radio1");
-    let mut radio2 = radio2.lora(LoRaConfig::default()).unwrap();
+    let radio2 = Sx127x::new(w2).expect("error creating radio1");
+    let mut radio2 = radio2.lora(&LoRaConfig::default(), &LoRaChannel::default()).unwrap();
 
     println!("Testing send/receive");
 
@@ -57,7 +55,7 @@ fn integration() {
     let mut received = false;
     let mut buff = [0u8; 1024];
     let mut n = 0;
-    let mut info = Info::default();
+    let mut info = LoRaInfo::default();
 
     for _i in 0..10 {
         // Check TX state

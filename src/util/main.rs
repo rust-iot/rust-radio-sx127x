@@ -191,11 +191,11 @@ fn main() {
 
     debug!("Creating radio instance");
 
-    let settings = Settings::default();
     let config = LoRaConfig::default();
+    let channel = LoRaChannel::default();
 
-    let radio = Sx127x::spi(spi, cs, busy, rst, Delay{}, settings).expect("error creating device");
-    let mut radio = radio.lora(config).expect("error configuring lora mode");
+    let radio = Sx127x::spi(spi, cs, busy, rst, Delay{}).expect("error creating device");
+    let mut radio = radio.lora(&config, &channel).expect("error configuring lora mode");
 
     debug!("Executing command");
 

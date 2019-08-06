@@ -5,11 +5,8 @@
 /// LoRa Radio Configuration Object
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct LoRaConfig {
-    /// LoRa channel configuration
-    pub channel: LoRaChannel,
     /// LoRa Frequency hopping configuration (defaults to disabled)
     pub frequency_hop: FrequencyHopping,
-
     /// Preamble length in symbols (defaults to 0x8)
     /// (note that hardware adds four additional symbols in LoRa mode)
     pub preamble_len: u16,
@@ -26,7 +23,6 @@ pub struct LoRaConfig {
 impl Default for LoRaConfig {
     fn default() -> Self {
         LoRaConfig {
-            channel: LoRaChannel::default(),
             preamble_len: 0x8,
             symbol_timeout: 0x64,
             payload_len: PayloadLength::Variable,
@@ -57,6 +53,25 @@ impl Default for LoRaChannel {
             bw: Bandwidth::Bw125kHz,
             sf: SpreadingFactor::Sf7,
             cr: CodingRate::Cr4_5,
+        }
+    }
+}
+
+/// LoRa Received packet information
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct LoRaInfo {
+    /// Received Signal Strength Indication
+    pub rssi: i16,
+    /// Signal to Noise Ratio
+    pub snr: i16,
+}
+
+
+impl Default for LoRaInfo {
+    fn default() -> Self {
+        Self {
+            rssi: 0,
+            snr: 0,
         }
     }
 }

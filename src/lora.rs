@@ -8,35 +8,19 @@ use radio::{State as _, Channel as _, Interrupts as _};
 
 use crate::{Sx127x, Error};
 use crate::base::Base as Sx127xBase;
-use crate::device::{self, State, ModemMode, regs};
+use crate::device::{self, State, Modem, Channel, ModemMode, regs};
 use crate::device::lora::*;
 
+/// Empty struct for signalling LoRa operating mode
+pub struct LoRaMode ();
 
 
-/// Received packet information
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct Info {
-    /// Received Signal Strength Indication
-    pub rssi: i16,
-    /// Signal to Noise Ratio
-    pub snr: i16,
-}
-
-impl Default for Info {
-    fn default() -> Self {
-        Info {
-            rssi: 0,
-            snr: 0,
-        }
-    }
-}
-
-impl<Base, CommsError, PinError> Sx127x<Base, CommsError, PinError, LoRaConfig>
+impl<Base, CommsError, PinError> Sx127x<Base, CommsError, PinError, LoRaMode>
 where
     Base: Sx127xBase<CommsError, PinError>,
 {
-    /// Configure the radio in lora mode with the provided configuration
-    pub fn configure_lora(&mut self, config: &LoRaConfig) -> Result<(), Error<CommsError, PinError>> {
+    /// Configure the radio in lora mode with the provided configuration and channel
+    pub fn configure_lora(&mut self, config: &LoRaConfig, channel: &LoRaChannel) -> Result<(), Error<CommsError, PinError>> {
         debug!("Configuring lora mode");
 
         // Switch to sleep to change modem mode
@@ -46,7 +30,7 @@ where
         self.set_modem(ModemMode::LoRa)?;
 
         // Set channel configuration
-        self.set_channel(&config.channel)?;
+        self.set_channel(channel)?;
 
         // Set symbol timeout
         self.write_reg(regs::LoRa::SYMBTIMEOUTLSB, (config.symbol_timeout & 0xFF) as u8 )?;
@@ -67,10 +51,26 @@ where
             self.update_reg(regs::Common::PLLHOP, PLLHOP_FASTHOP_MASK, PLLHOP_FASTHOP_ON)?;
         }
 
+        //self.configure_pa(config.pa_config)?;
 
-        self.config = *config;
+        self.config.channel = Channel::LoRa(channel.clone());
+        self.config.modem = Modem::LoRa(config.clone());
 
         Ok(())
+    }
+
+    fn config(&self) -> LoRaConfig {
+        match self.config.modem {
+            Modem::LoRa(v) => v,
+            _ => unreachable!(),
+        }
+    }
+
+    fn channel(&self) -> LoRaChannel {
+        match self.config.channel {
+            Channel::LoRa(v) => v,
+            _ => unreachable!(),
+        }
     }
 
     fn process_rssi_snr(&self, rssi: i16, snr: i16) -> (i16, i16) {
@@ -84,7 +84,7 @@ where
         };
        
         // Select RSSI offset by band
-        let offset = if self.config.channel.freq > RF_MID_BAND_THRESH {
+        let offset = if self.channel().freq > RF_MID_BAND_THRESH {
             device::RSSI_OFFSET_HF
         } else {
             device::RSSI_OFFSET_LF
@@ -101,7 +101,7 @@ where
     }
 }
 
-impl<Base, CommsError, PinError> radio::Interrupts for Sx127x<Base, CommsError, PinError, LoRaConfig>
+impl<Base, CommsError, PinError> radio::Interrupts for Sx127x<Base, CommsError, PinError, LoRaMode>
 where
     Base: Sx127xBase<CommsError, PinError>,
 {
@@ -122,9 +122,7 @@ where
     }
 }
 
-
-
-impl<Base, CommsError, PinError> radio::Channel for Sx127x<Base, CommsError, PinError, LoRaConfig>
+impl<Base, CommsError, PinError> radio::Channel for Sx127x<Base, CommsError, PinError, LoRaMode>
 where
     Base: Sx127xBase<CommsError, PinError>,
 {
@@ -148,7 +146,7 @@ where
             LowDatarateOptimise::Disabled
         };
 
-        let implicit_header = match self.config.payload_len {
+        let implicit_header = match self.config().payload_len {
             PayloadLength::Variable => IMPLICITHEADER_DISABLE,
             PayloadLength::Constant(_len) => IMPLICITHEADER_ENABLE,
         };
@@ -158,8 +156,8 @@ where
             BANDWIDTH_MASK | CODERATE_MASK | IMPLICITHEADER_MASK,
             channel.bw as u8 | channel.cr as u8 | implicit_header)?;
 
-        let symbol_timeout_msb = (self.config.symbol_timeout >> 8) & 0b0011;
-        let payload_crc = self.config.payload_crc;
+        let symbol_timeout_msb = (self.config().symbol_timeout >> 8) & 0b0011;
+        let payload_crc = self.config().payload_crc;
 
         self.update_reg(regs::LoRa::MODEMCONFIG2, 
             SPREADING_FACTOR_MASK | RXPAYLOADCRC_MASK | SYMBTIMEOUTMSB_MASK,
@@ -191,13 +189,13 @@ where
         }
 
         // Update internal channel state
-        self.config.channel = *channel;
+        self.config.channel = Channel::LoRa(channel.clone());
 
         Ok(())
     }
 }
 
-impl<Base, CommsError, PinError> radio::Transmit for Sx127x<Base, CommsError, PinError, LoRaConfig>
+impl<Base, CommsError, PinError> radio::Transmit for Sx127x<Base, CommsError, PinError, LoRaMode>
 where
     Base: Sx127xBase<CommsError, PinError>,
 {
@@ -260,13 +258,14 @@ where
     }
 }
 
-impl<Base, CommsError, PinError> radio::Receive for Sx127x<Base, CommsError, PinError, LoRaConfig>
+impl<Base, CommsError, PinError> radio::Receive for Sx127x<Base, CommsError, PinError, LoRaMode>
 where
     Base: Sx127xBase<CommsError, PinError>,
 {
-    type Info = Info;
+    type Info = LoRaInfo;
     type Error = Error<CommsError, PinError>;
 
+    /// Start receive mode
     fn start_receive(&mut self) -> Result<(), Self::Error> {
         use device::lora::Bandwidth::*;
 
@@ -289,7 +288,7 @@ where
         }
 
         // ERRATA 2.3 - Receiver Spurious Reception of a LoRa Signal
-        match self.config.channel.bw {
+        match self.channel().bw {
             Bw125kHz => {
                 self.write_reg(regs::LoRa::TEST2F, 0x40)?;
             },
@@ -389,7 +388,7 @@ where
 
 }
 
-impl<Base, CommsError, PinError> radio::Rssi for Sx127x<Base, CommsError, PinError, LoRaConfig>
+impl<Base, CommsError, PinError> radio::Rssi for Sx127x<Base, CommsError, PinError, LoRaMode>
 where
     Base: Sx127xBase<CommsError, PinError>,
 {

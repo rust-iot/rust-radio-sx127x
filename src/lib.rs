@@ -43,13 +43,15 @@ pub mod base;
 pub mod ffi;
 
 pub mod device;
-use device::{State, ModemMode, PaConfig, PaSelect, regs};
-use device::lora::LoRaConfig;
+use device::{State, Config, ModemMode, PaConfig, regs};
+use device::lora::{LoRaConfig, LoRaChannel};
+use device::fsk::{FskConfig, FskChannel};
 
 pub mod lora;
-
+use lora::LoRaMode;
 
 pub mod fsk;
+use fsk::FskOokMode;
 
 pub mod prelude;
 
@@ -63,7 +65,7 @@ pub const SPI_MODE: SpiMode = SpiMode {
 /// 
 /// Operating functions are implemented as traits from the [radio] package
 /// 
-pub struct Sx127x<Base, CommsError, PinError, Config>{
+pub struct Sx127x<Base, CommsError, PinError, Mode>{
     hal: Base,
 
     #[cfg(feature = "ffi")]
@@ -74,26 +76,9 @@ pub struct Sx127x<Base, CommsError, PinError, Config>{
 
     _ce: PhantomData<CommsError>,
     _pe: PhantomData<PinError>,
-
-    settings: Settings,
+    _mode: PhantomData<Mode>,
 
     config: Config,
-}
-
-/// Initial radio configuration object
-/// This contains general information for either radio configuration
-#[derive(Clone, PartialEq, Debug)]
-pub struct Settings {
-    /// Radio crystal frequency (defaults to 32MHz)
-    pub xtal_freq: u32,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self{
-            xtal_freq: 32000000,
-        }
-    }
 }
 
 /// Sx127x error type
@@ -135,13 +120,13 @@ where
     Delay: delay::DelayMs<u32>,
 {
     /// Create an Sx127x with the provided SPI implementation and pins
-    pub fn spi(spi: Spi, cs: Output, busy: Input, sdn: Output, delay: Delay, settings: Settings) -> Result<Self, Error<CommsError, PinError>> {
+    pub fn spi(spi: Spi, cs: Output, busy: Input, sdn: Output, delay: Delay) -> Result<Self, Error<CommsError, PinError>> {
         // Create SpiWrapper over spi/cs/busy
         let mut hal = SpiWrapper::new(spi, cs, delay);
         hal.with_busy(busy);
         hal.with_reset(sdn);
         // Create instance with new hal
-        Self::new(hal, settings)
+        Self::new(hal)
     }
 }
 
@@ -152,11 +137,10 @@ where
     Base: base::Base<CommsError, PinError>,
 {
     /// Create a new radio instance over an arbitrary base::Base implementation
-    pub fn new(hal: Base, settings: Settings) -> Result<Self, Error<CommsError, PinError>> {
-        
+    pub fn new(hal: Base) -> Result<Self, Error<CommsError, PinError>> {
 
         // Build container object
-        let mut sx127x = Self::build(hal, settings, ());
+        let mut sx127x = Self::build(hal, Config::default());
 
         // Reset IC
         sx127x.hal.reset()?;
@@ -180,43 +164,81 @@ where
 
         Ok(sx127x)
     }
+}
 
+impl<Base, CommsError, PinError, Mode> Sx127x<Base, CommsError, PinError, Mode>
+where
+    Base: base::Base<CommsError, PinError>,
+{
     /// Configure the modem into LoRa mode
-    pub fn lora(self, lora_config: LoRaConfig) -> Result<Sx127x<Base, CommsError, PinError, LoRaConfig>, Error<CommsError, PinError>> {
+    pub fn lora(self, lora_config: &LoRaConfig, lora_channel: &LoRaChannel) -> Result<Sx127x<Base, CommsError, PinError, LoRaMode>, Error<CommsError, PinError>> {
         // Destructure existing object
-        let Self{hal, settings, config: _, _ce, _pe} = self;
+        let Self{hal, config, _mode, _ce, _pe} = self;
 
         // Create new object
         let mut s = Sx127x { 
-            hal, settings, 
-            config: lora_config.clone(),
+            hal, 
+            config,
             #[cfg(feature = "ffi")]
             c: None, 
             #[cfg(feature = "ffi")]
             err: None,
+            _mode: PhantomData,
             _ce,
             _pe,
         };
 
         // Configure LoRa mode
-        s.configure_lora(&lora_config)?;
+        s.configure_lora(lora_config, lora_channel)?;
+
+        // Configure power amplifier
+        s.configure_pa(&s.config.pa_config.clone())?;
+
+        // Return new object
+        Ok(s)
+    }
+
+    /// Configure the modem into FSK/OOK mode
+    pub fn fsk(self, fsk_config: &FskConfig, fsk_channel: &FskChannel) -> Result<Sx127x<Base, CommsError, PinError, FskOokMode>, Error<CommsError, PinError>> {
+        // Destructure existing object
+        let Self{hal, config, _mode, _ce, _pe} = self;
+
+        // Create new object
+        let mut s = Sx127x { 
+            hal, 
+            config,
+            #[cfg(feature = "ffi")]
+            c: None, 
+            #[cfg(feature = "ffi")]
+            err: None,
+            _mode: PhantomData,
+            _ce,
+            _pe,
+        };
+
+        // Configure FSK/OOK mode
+        s.configure_fsk(fsk_config, fsk_channel)?;
+
+        // Configure power amplifier
+        s.configure_pa(&s.config.pa_config.clone())?;
 
         // Return new object
         Ok(s)
     }
 }
 
-impl<Base, CommsError, PinError, Config> Sx127x<Base, CommsError, PinError, Config>
+impl<Base, CommsError, PinError, Mode> Sx127x<Base, CommsError, PinError, Mode>
 where
     Base: base::Base<CommsError, PinError>,
 {
-    pub(crate) fn build(hal: Base, settings: Settings, config: Config) -> Self {
+    pub(crate) fn build(hal: Base, config: Config) -> Self {
         Sx127x { 
-            hal, settings, config,
+            hal, config,
             #[cfg(feature = "ffi")]
             c: None, 
             #[cfg(feature = "ffi")]
             err: None,
+            _mode: PhantomData,
             _ce: PhantomData,
             _pe: PhantomData,
         }
@@ -326,6 +348,7 @@ where
     }
 
 
+    /// Configure power amplifier
     pub(crate) fn configure_pa(&mut self, pa_config: &PaConfig) -> Result<(), Error<CommsError, PinError>> {
         use device::*;
         
@@ -342,7 +365,7 @@ where
             }
         }
 
-        self.set_power(config.power)?;
+        self.set_power(pa_config.power)?;
 
         Ok(())
     }
@@ -361,13 +384,13 @@ where
 
     // Calculate a channel number from a given frequency
     pub(crate) fn freq_to_channel_index(&self, freq: u32) -> u32 {
-        let step = (self.settings.xtal_freq as f32) / (2u32.pow(19) as f32);
+        let step = (self.config.xtal_freq as f32) / (2u32.pow(19) as f32);
         let ch = (freq as f32) / step;
         ch as u32
     }
 
     pub(crate) fn channel_index_to_freq(&self, ch: u32) -> u32 {
-        let step = (self.settings.xtal_freq as f32) / (2u32.pow(19) as f32);
+        let step = (self.config.xtal_freq as f32) / (2u32.pow(19) as f32);
         let freq = (ch as f32) * step;
         freq as u32
     }
