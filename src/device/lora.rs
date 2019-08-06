@@ -2,7 +2,64 @@
 //! 
 //! Copyright 2019 Ryan Kurte
 
+/// LoRa Radio Configuration Object
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct LoRaConfig {
+    /// LoRa channel configuration
+    pub channel: LoRaChannel,
+    /// LoRa Frequency hopping configuration (defaults to disabled)
+    pub frequency_hop: FrequencyHopping,
 
+    /// Preamble length in symbols (defaults to 0x8)
+    /// (note that hardware adds four additional symbols in LoRa mode)
+    pub preamble_len: u16,
+    /// Payload length configuration (defaults to Variable / Explicit header mode)
+    pub payload_len: PayloadLength,
+    /// Payload RX CRC configuration (defaults to enabled)
+    pub payload_crc: PayloadCrc,
+    /// IQ inversion configuration (defaults to disabled)
+    pub invert_iq: bool,
+    /// TxSingle timeout value (defaults to 0x64)
+    pub symbol_timeout: u16,
+}
+
+impl Default for LoRaConfig {
+    fn default() -> Self {
+        LoRaConfig {
+            channel: LoRaChannel::default(),
+            preamble_len: 0x8,
+            symbol_timeout: 0x64,
+            payload_len: PayloadLength::Variable,
+            payload_crc: PayloadCrc::Enabled,
+            frequency_hop: FrequencyHopping::Disabled,
+            invert_iq: false,
+        }
+    }
+}
+
+/// LoRa radio channel configuration
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct LoRaChannel {
+    /// LoRa frequency in Hz (defaults to 434 MHz)
+    pub freq: u32,
+    /// LoRa channel bandwidth (defaults to 125kHz)
+    pub bw: Bandwidth,
+    /// LoRa spreading factor (defaults to SF7)
+    pub sf: SpreadingFactor,
+    /// LoRa coding rate (defaults to 4/5)
+    pub cr: CodingRate,
+}
+
+impl Default for LoRaChannel {
+    fn default() -> Self {
+        Self {
+            freq: 434e6 as u32,
+            bw: Bandwidth::Bw125kHz,
+            sf: SpreadingFactor::Sf7,
+            cr: CodingRate::Cr4_5,
+        }
+    }
+}
 
 pub const BANDWIDTH_MASK: u8 = 0b1111_0000;
 
@@ -136,30 +193,6 @@ pub const INVERTIQ_TX_ON:   u8 = 0x00;
 pub const INVERTIQ2_ON:  u8 = 0x19;
 pub const INVERTIQ2_OFF: u8 = 0x1D;
 
-pub const PASELECT_MASK:     u8 = 0b1000_0000;
-pub const PASELECT_RFO:      u8 = 0b0000_0000;
-pub const PASELECT_PA_BOOST: u8 = 0b1000_0000;
-
-/// Select the power amplifier output configuration
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub enum PaSelect {
-    /// RFO pin, output power limited to +14dBm
-    /// with specified maximum output value, defaults to 0x04 for 14dBm output
-    /// Pout = PMax-(15-power) where PMax = 10.8+0.6*maximum 
-    Rfo(u8),
-    /// PA_BOOST pin and output power limited to +20dBm
-    /// Pout = 17-(15-power)
-    Boost,
-}
-
-pub const MAXPOWER_MASK: u8 = 0b0111_0000;
-pub const MAXPOWER_SHIFT: u8 = 4;
-
-pub const OUTPUTPOWER_MASK: u8 = 0b0000_1111;
-
-pub const PADAC_MASK: u8 = 0b0000_0111;
-pub const PADAC_20DBM_ON: u8 = 0x07;
-pub const PADAC_20DBM_OFF: u8 = 0x04;
 
 
 bitflags! {

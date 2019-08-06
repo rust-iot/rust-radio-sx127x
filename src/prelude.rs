@@ -2,5 +2,5 @@
 
 pub use crate::{Sx127x, Settings, Error};
 
-pub use crate::lora::LoRaConfig;
-pub use crate::lora::{Channel as LoRaChannel, Info as LoRaInfo};
+//pub use crate::lora::LoRaConfig;
+//pub use crate::lora::{LoRaChannel, Info as LoRaInfo};

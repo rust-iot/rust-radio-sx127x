@@ -2,30 +2,65 @@
 //! 
 //! Copyright 2019 Ryan Kurte
 
+/// FSK and OOK mode configuration
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct FskConfig {
+    /// FSK/OOK channel configuration
+    pub channel: FskChannel,
+}
+
+impl Default for FskConfig {
+    fn default() -> Self {
+        Self {
+            channel: FskChannel::default(),
+
+        }
+    }
+}
+
+/// Fsk radio channel configuration
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct FskChannel {
+    /// Channel bit-rate
+    bitrate: u16,
+
+    /// Channel bandwidth
+    bandwidth: Bandwidth,
+}
+
+impl Default for FskChannel {
+    fn default() -> Self {
+        Self {
+            bitrate: 0,
+            bandwidth: Bandwidth::Bw12500,
+        }
+    }
+}
+
 // FSK bandwidth register values
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Bandwidth {
-    Bandwidth2600 = 0x17,
-    Bandwidth3100 = 0x0F,
-    Bandwidth3900 = 0x07,
-    Bandwidth5200 = 0x16,
-    Bandwidth6300 = 0x0E,
-    Bandwidth7800 = 0x06,
-    Bandwidth10400 = 0x15,
-    Bandwidth12500 = 0x0D,
-    Bandwidth15600 = 0x05,
-    Bandwidth20800 = 0x14,
-    Bandwidth25000 = 0x0C,
-    Bandwidth31300 = 0x04,
-    Bandwidth41700 = 0x13,
-    Bandwidth50000 = 0x0B,
-    Bandwidth62500 = 0x03,
-    Bandwidth83333 = 0x12,
-    Bandwidth100000 = 0x0A,
-    Bandwidth125000 = 0x02,
-    Bandwidth166700 = 0x11,
-    Bandwidth200000 = 0x09,
-    Bandwidth250000 = 0x01,
+    Bw2600 = 0x17,
+    Bw3100 = 0x0F,
+    Bw3900 = 0x07,
+    Bw5200 = 0x16,
+    Bw6300 = 0x0E,
+    Bw7800 = 0x06,
+    Bw10400 = 0x15,
+    Bw12500 = 0x0D,
+    Bw15600 = 0x05,
+    Bw20800 = 0x14,
+    Bw25000 = 0x0C,
+    Bw31300 = 0x04,
+    Bw41700 = 0x13,
+    Bw50000 = 0x0B,
+    Bw62500 = 0x03,
+    Bw83333 = 0x12,
+    Bw100000 = 0x0A,
+    Bw125000 = 0x02,
+    Bw166700 = 0x11,
+    Bw200000 = 0x09,
+    Bw250000 = 0x01,
 }
 
 pub const OPMODE_LRMODE_MASK: u8 = 0x80;
@@ -35,10 +70,10 @@ pub const OPMODE_SHAPING_MASK: u8 = 0b0001_1000;
 
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Shaping {
-    Shaping00 = 0x00,
-    Shaping01 = 0x08,
-    Shaping10 = 0x10,
-    Shaping11 = 0x18,
+    Sh00 = 0x00,
+    Sh01 = 0x08,
+    Sh10 = 0x10,
+    Sh11 = 0x18,
 }
 
 pub const OPMODE_MODULATION_MASK: u8 = 0b0010_0000;

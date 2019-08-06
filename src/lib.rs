@@ -29,7 +29,7 @@ extern crate embedded_spi;
 use embedded_spi::{Error as WrapError, wrapper::Wrapper as SpiWrapper};
 
 extern crate radio;
-use radio::{State as _};
+use radio::{State as _, Power as _};
 
 #[cfg(feature = "ffi")]
 pub mod bindings;
@@ -43,10 +43,11 @@ pub mod base;
 pub mod ffi;
 
 pub mod device;
-use device::{State, Modem, regs};
+use device::{State, ModemMode, PaConfig, PaSelect, regs};
+use device::lora::LoRaConfig;
 
 pub mod lora;
-use lora::LoRaConfig;
+
 
 pub mod fsk;
 
@@ -198,7 +199,7 @@ where
         };
 
         // Configure LoRa mode
-        s.configure(&lora_config)?;
+        s.configure_lora(&lora_config)?;
 
         // Return new object
         Ok(s)
@@ -220,6 +221,7 @@ where
             _pe: PhantomData,
         }
     }
+
 }
 
 impl<Base, CommsError, PinError, Config> Sx127x<Base, CommsError, PinError, Config>
@@ -267,6 +269,52 @@ where
 
 }
 
+impl<Base, CommsError, PinError, Config> radio::Power for Sx127x<Base, CommsError, PinError, Config>
+where
+    Base: base::Base<CommsError, PinError>,
+{
+    type Error = Error<CommsError, PinError>;
+
+    /// Set transmit power (using the existing `PaConfig`)
+    fn set_power(&mut self, power: i8) -> Result<(), Error<CommsError, PinError>> {
+        use device::*;
+
+        // Limit to viable input range
+        let power = core::cmp::max(power, 0);
+
+        // Read from config to determine PA mode
+        let config = self.read_reg(regs::Common::PACONFIG)?;
+
+        match config & PASELECT_MASK {
+            PASELECT_RFO => {
+                let max = ((config & MAXPOWER_MASK) >> MAXPOWER_SHIFT) as i8;
+
+                let power = core::cmp::min(power, 17i8);
+                let value = power - max + 15;
+
+                let v = self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value as u8)?;
+
+                debug!("Updated RFO PA_CONFIG for: {} dBm to: {:b}", power, v);
+            },
+            PASELECT_PA_BOOST => {
+
+                let power = core::cmp::min(power, 20i8);
+                let value = power - 17 + 15;
+
+                self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value as u8)?;
+
+                let pa_dac_enable = if power > 17 { PADAC_20DBM_ON } else { PADAC_20DBM_OFF };
+                let v = self.update_reg(regs::Common::PADAC, PADAC_MASK, pa_dac_enable)?;
+
+                debug!("Updated BOOST PA_CONFIG for: {} dBm to: {:b}", power, v);
+            },
+            _ => ()
+        }
+
+        Ok(())
+    }
+}
+
 impl<Base, CommsError, PinError, Config> Sx127x<Base, CommsError, PinError, Config>
 where
     Base: base::Base<CommsError, PinError>,
@@ -275,6 +323,28 @@ where
     /// Fetch device silicon version
     pub fn silicon_version(&mut self) -> Result<u8, Error<CommsError, PinError>> {
         self.read_reg(regs::Common::VERSION)
+    }
+
+
+    pub(crate) fn configure_pa(&mut self, pa_config: &PaConfig) -> Result<(), Error<CommsError, PinError>> {
+        use device::*;
+        
+        // Set output configuration
+        match pa_config.output {
+            PaSelect::Rfo(max) => {
+                self.update_reg(regs::Common::PACONFIG,
+                    PASELECT_MASK | MAXPOWER_MASK,
+                    PASELECT_RFO | ((max << MAXPOWER_SHIFT) & MAXPOWER_MASK)
+                )?;
+            },
+            PaSelect::Boost => {
+                self.update_reg(regs::Common::PACONFIG, PASELECT_MASK, PASELECT_PA_BOOST)?;
+            }
+        }
+
+        self.set_power(config.power)?;
+
+        Ok(())
     }
 
     pub(crate) fn set_state_checked(&mut self, state: State) -> Result<(), Error<CommsError, PinError>> {
@@ -302,14 +372,14 @@ where
         freq as u32
     }
 
-    /// Set operating modem for the device
-    pub(crate) fn set_modem(&mut self, modem: Modem) -> Result<(), Error<CommsError, PinError>> {
+    /// Set operating mode for the device
+    pub(crate) fn set_modem(&mut self, modem: ModemMode) -> Result<(), Error<CommsError, PinError>> {
         match modem {
-            Modem::Standard => {
+            ModemMode::Standard => {
                 self.set_state(State::Sleep)?;
                 self.update_reg(regs::Common::OPMODE, device::OPMODE_LONGRANGEMODE_MASK, device::LongRangeMode::Off as u8)?;
             },
-            Modem::LoRa => {
+            ModemMode::LoRa => {
                 self.set_state(State::Sleep)?;
                 self.update_reg(regs::Common::OPMODE, device::OPMODE_LONGRANGEMODE_MASK, device::LongRangeMode::On as u8)?;
             }

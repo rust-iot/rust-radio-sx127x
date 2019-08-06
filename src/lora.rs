@@ -4,76 +4,14 @@
 //! 
 //! Copyright 2019 Ryan Kurte
 
-use radio::{State as _, Channel as _, Power as _, Interrupts as _};
+use radio::{State as _, Channel as _, Interrupts as _};
 
 use crate::{Sx127x, Error};
 use crate::base::Base as Sx127xBase;
-use crate::device::{self, State, Modem, regs};
+use crate::device::{self, State, ModemMode, regs};
 use crate::device::lora::*;
 
-/// LoRa Radio Configuration Object
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct LoRaConfig {
-    /// LoRa channel configuration
-    pub channel: Channel,
-    /// LoRa preamble length in symbols (defaults to 0x8)
-    /// (not that hardware adds four additional symbols)
-    pub preamble_len: u16,
-    /// TxSingle timeout value (defaults to 0x64)
-    pub symbol_timeout: u16,
-    /// Payload length configuration (defaults to Variable / Explicit header mode)
-    pub payload_len: PayloadLength,
-    /// Payload RX CRC configuration (defaults to enabled)
-    pub payload_crc: PayloadCrc,
-    /// Frequency hopping configuration (defaults to disabled)
-    pub frequency_hop: FrequencyHopping,
-    /// Power amplifier output selection (defaults to PA_BOOST output)
-    pub pa_output: PaSelect,
-    /// Output power in dBm (defaults to 10dBm)
-    pub power: i8,
-    /// IQ inversion configuration (defaults to disabled)
-    pub invert_iq: bool,
-}
 
-impl Default for LoRaConfig {
-    fn default() -> Self {
-        LoRaConfig {
-            channel: Channel::default(),
-            preamble_len: 0x8,
-            symbol_timeout: 0x64,
-            payload_len: PayloadLength::Variable,
-            payload_crc: PayloadCrc::Enabled,
-            frequency_hop: FrequencyHopping::Disabled,
-            pa_output: PaSelect::Boost,
-            power: 10,
-            invert_iq: false,
-        }
-    }
-}
-
-/// LoRa radio channel configuration
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct Channel {
-    /// LoRa frequency in Hz (defaults to 434 MHz)
-    pub freq: u32,
-    /// LoRa channel bandwidth (defaults to 125kHz)
-    pub bw: Bandwidth,
-    /// LoRa spreading factor (defaults to SF7)
-    pub sf: SpreadingFactor,
-    /// LoRa coding rate (defaults to 4/5)
-    pub cr: CodingRate,
-}
-
-impl Default for Channel {
-    fn default() -> Self {
-        Channel {
-            freq: 434e6 as u32,
-            bw: Bandwidth::Bw125kHz,
-            sf: SpreadingFactor::Sf7,
-            cr: CodingRate::Cr4_5,
-        }
-    }
-}
 
 /// Received packet information
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -98,14 +36,14 @@ where
     Base: Sx127xBase<CommsError, PinError>,
 {
     /// Configure the radio in lora mode with the provided configuration
-    pub fn configure(&mut self, config: &LoRaConfig) -> Result<(), Error<CommsError, PinError>> {
+    pub fn configure_lora(&mut self, config: &LoRaConfig) -> Result<(), Error<CommsError, PinError>> {
         debug!("Configuring lora mode");
 
         // Switch to sleep to change modem mode
         self.set_state(State::Sleep)?;
 
         // Switch to LoRa mode
-        self.set_modem(Modem::LoRa)?;
+        self.set_modem(ModemMode::LoRa)?;
 
         // Set channel configuration
         self.set_channel(&config.channel)?;
@@ -128,21 +66,7 @@ where
             debug!("Enabling frequency hopping with symbol time: {}", symbol_time);
             self.update_reg(regs::Common::PLLHOP, PLLHOP_FASTHOP_MASK, PLLHOP_FASTHOP_ON)?;
         }
-  
-        // Set output configuration
-        match config.pa_output {
-            PaSelect::Rfo(max) => {
-                self.update_reg(regs::Common::PACONFIG,
-                    PASELECT_MASK | MAXPOWER_MASK,
-                    PASELECT_RFO | ((max << MAXPOWER_SHIFT) & MAXPOWER_MASK)
-                )?;
-            },
-            PaSelect::Boost => {
-                self.update_reg(regs::Common::PACONFIG, PASELECT_MASK, PASELECT_PA_BOOST)?;
-            }
-        }
 
-        self.set_power(config.power)?;
 
         self.config = *config;
 
@@ -198,60 +122,17 @@ where
     }
 }
 
-impl<Base, CommsError, PinError> radio::Power for Sx127x<Base, CommsError, PinError, LoRaConfig>
-where
-    Base: Sx127xBase<CommsError, PinError>,
-{
-    type Error = Error<CommsError, PinError>;
 
-    /// Set LoRa mode transmit power
-    fn set_power(&mut self, power: i8) -> Result<(), Error<CommsError, PinError>> {
-        // Limit to viable input range
-        let power = core::cmp::max(power, 0);
-
-        // Read from config to determine PA mode
-        let config = self.read_reg(regs::Common::PACONFIG)?;
-
-        match config & PASELECT_MASK {
-            PASELECT_RFO => {
-                let max = ((config & MAXPOWER_MASK) >> MAXPOWER_SHIFT) as i8;
-
-                let power = core::cmp::min(power, 17i8);
-                let value = power - max + 15;
-
-                let v = self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value as u8)?;
-
-                debug!("Updated RFO PA_CONFIG for: {} dBm to: {:b}", power, v);
-            },
-            PASELECT_PA_BOOST => {
-
-                let power = core::cmp::min(power, 20i8);
-                let value = power - 17 + 15;
-
-                self.update_reg(regs::Common::PACONFIG, OUTPUTPOWER_MASK, value as u8)?;
-
-                let pa_dac_enable = if power > 17 { PADAC_20DBM_ON } else { PADAC_20DBM_OFF };
-                let v = self.update_reg(regs::Common::PADAC, PADAC_MASK, pa_dac_enable)?;
-
-                debug!("Updated BOOST PA_CONFIG for: {} dBm to: {:b}", power, v);
-            },
-            _ => ()
-        }
-
-        Ok(())
-    }
-
-}
 
 impl<Base, CommsError, PinError> radio::Channel for Sx127x<Base, CommsError, PinError, LoRaConfig>
 where
     Base: Sx127xBase<CommsError, PinError>,
 {
-    type Channel = Channel;
+    type Channel = LoRaChannel;
     type Error = Error<CommsError, PinError>;
 
     /// Set the LoRa mode channel for future receive or transmit operations
-    fn set_channel(&mut self, channel: &Channel) -> Result<(), Error<CommsError, PinError>> {
+    fn set_channel(&mut self, channel: &LoRaChannel) -> Result<(), Error<CommsError, PinError>> {
         use device::lora::{SpreadingFactor::*, Bandwidth::*};
         
         // Set the frequency

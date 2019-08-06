@@ -4,16 +4,15 @@
 //! 
 //! Copyright 2019 Ryan Kurte
 
-/// FSK and OOK mode configuration
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct Config {
-    //TODO: implement this
-}
+use crate::{Sx127x, Error};
+use crate::base::Base as Sx127xBase;
+use crate::device::{self, State, ModemMode, regs};
 
-impl Default for Config {
-    fn default() -> Self {
-        Config{
 
-        }
-    }
+
+impl<Base, CommsError, PinError, Config> Sx127x<Base, CommsError, PinError, Config>
+where
+    Base: Sx127xBase<CommsError, PinError>,
+{
+
 }
