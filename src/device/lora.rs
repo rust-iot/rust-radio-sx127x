@@ -2,8 +2,11 @@
 //! 
 //! Copyright 2019 Ryan Kurte
 
+pub use super::common::*;
+
 /// LoRa Radio Configuration Object
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct LoRaConfig {
     /// LoRa Frequency hopping configuration (defaults to disabled)
     pub frequency_hop: FrequencyHopping,
@@ -35,6 +38,7 @@ impl Default for LoRaConfig {
 
 /// LoRa radio channel configuration
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct LoRaChannel {
     /// LoRa frequency in Hz (defaults to 434 MHz)
     pub freq: u32,
@@ -131,14 +135,6 @@ pub const IMPLICITHEADER_MASK:    u8 = 0b0000_0001;
 pub const IMPLICITHEADER_ENABLE:  u8 = 0b0000_0001;
 pub const IMPLICITHEADER_DISABLE: u8 = 0b0000_0000;
 
-/// Payload length configuration
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub enum PayloadLength {
-    /// Constant length payloads use implicit headers
-    Constant(u16),
-    /// Variable length payloads must be contain explicit headers
-    Variable
-}
 
 pub const RXPAYLOADCRC_MASK: u8 = 0b0000_0100;
 

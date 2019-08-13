@@ -112,6 +112,20 @@ impl <CommsError, PinError> From<WrapError<CommsError, PinError>> for Error<Comm
     }
 }
 
+#[derive(Clone, PartialEq, Debug)]
+pub struct Settings {
+    /// Device crystal frequency (defaults to 32MHz)
+    pub xtal_freq: u32,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            xtal_freq: 32000000
+        }
+    }
+}
+
 impl<Spi, CommsError, Output, Input, PinError, Delay> Sx127x<SpiWrapper<Spi, CommsError, Output, Input, PinError, Delay>, CommsError, PinError, ()>
 where
     Spi: Transfer<u8, Error = CommsError> + Write<u8, Error = CommsError>,

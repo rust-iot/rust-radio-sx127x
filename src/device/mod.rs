@@ -9,28 +9,14 @@ use core::convert::TryFrom;
 pub mod regs;
 use regs::{Register, Common, Fsk, LoRa};
 
+pub mod common;
+
 pub mod lora;
 use self::lora::{LoRaConfig, LoRaChannel};
 pub mod fsk;
 use self::fsk::{FskConfig, FskChannel};
 
 pub const OPMODE_STATE_MASK: u8 = 0b0000_0111;
-
-/// Sx127x radio state enumeration
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub enum State {
-    Sleep       = 0x00,
-    Standby     = 0x01,
-    FsTx        = 0x02,
-    Tx          = 0x03,
-    FsRx        = 0x04,
-    Rx          = 0x05,
-
-    /// Lora specific single receive mode
-    RxOnce      = 0x06,
-    /// Lora specific channel activity detection mode
-    Cad         = 0x07,
-}
 
 /// Sx127x radio configuration
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -59,6 +45,52 @@ impl Default for Config {
     }
 }
 
+
+/// Radio modem configuration contains fields for each modem mode
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum Modem {
+    /// Modem not configured
+    None,
+    /// Modem configured in LoRa mode
+    LoRa(LoRaConfig),
+    /// Modem configured in Standard (FSK/OOK) mode
+    FskOok(FskConfig),
+}
+
+/// Radio channel configuration contains channel options for each mode
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum Channel {
+    /// Channel not configured
+    None,
+    /// Channel configured in LoRa mode
+    LoRa(LoRaChannel),
+    /// Channel configured in Standard (FSK/OOK) mode
+    FskOok(FskChannel),
+}
+
+
+impl Default for Channel {
+    fn default() -> Self {
+        Channel::LoRa(LoRaChannel::default())
+    }
+}
+
+/// Sx127x radio state enumeration
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum State {
+    Sleep       = 0x00,
+    Standby     = 0x01,
+    FsTx        = 0x02,
+    Tx          = 0x03,
+    FsRx        = 0x04,
+    Rx          = 0x05,
+
+    /// Lora specific single receive mode
+    RxOnce      = 0x06,
+    /// Lora specific channel activity detection mode
+    Cad         = 0x07,
+}
+
 /// Sx127x Power Amplifier (PA) configuration
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct PaConfig {
@@ -77,27 +109,6 @@ impl Default for PaConfig {
     }
 }
 
-/// Modem configuration contains constants for each modem mode
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub enum Modem {
-    /// Modem not configured
-    None,
-    /// Modem configured in LoRa mode
-    LoRa(LoRaConfig),
-    /// Modem configured in Standard (FSK/OOK) mode
-    FskOok(FskConfig),
-}
-
-/// Channel configuration contains channel options for each mode
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub enum Channel {
-    /// Channel not configured
-    None,
-    /// Channel configured in LoRa mode
-    LoRa(LoRaChannel),
-    /// Channel configured in Standard (FSK/OOK) mode
-    FskOok(FskChannel),
-}
 
 /// OPMODE register LowFrequencyMode bit mask
 pub const OPMODE_LF_MASK: u8 = 0b0000_1000;

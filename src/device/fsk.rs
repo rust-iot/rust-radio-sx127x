@@ -2,37 +2,109 @@
 //! 
 //! Copyright 2019 Ryan Kurte
 
+pub use super::common::*;
+
 /// FSK and OOK mode configuration
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct FskConfig {
-    /// FSK/OOK channel configuration
-    pub channel: FskChannel,
+
+    /// Preamble length in symbols (defaults to 0x8)
+    pub preamble_len: u16,
+
+    /// Payload length configuration (defaults to Variable / Explicit header mode)
+    pub payload_len: PayloadLength,
+
+    /// DC-Free encoding/decoding
+    pub dc_free: DcFree,
+
+    /// Payload RX CRC configuration (defaults to enabled)
+    pub crc: Crc,
+
+    /// Disable auto-clear FIFO and restart RX on CRC failure
+    pub crc_autoclear: CrcAutoClear,
+
+    /// Address filtering in RX mode
+    pub address_filter: AddressFilter,
+
+    /// Select CRC whitening algorithm
+    pub crc_whitening: CrcWhitening,
+
+    /// Set data processing mode
+    pub data_mode: DataMode,
+
+    /// Enable io-homecontrol compatibility mode
+    pub io_home: IoHome,
+
+    /// Enable beacon mode in fixed packet format
+    pub beacon: Beacon,
+
+    /// Node address for filtering
+    pub node_address: u8,
+
+    /// Broadcast address for filtering
+    pub broadcast_address: u8,
+
+    /// IQ inversion configuration (defaults to disabled)
+    pub invert_iq: bool,
+
+    /// RX continuous mode
+    pub rx_continuous: bool,
+
+    /// Preamble
+    pub preamble: u16,
 }
 
 impl Default for FskConfig {
     fn default() -> Self {
         Self {
-            channel: FskChannel::default(),
-
+            preamble_len: 0x8,
+            payload_len: PayloadLength::Variable,
+            dc_free: DcFree::Off,
+            crc: Crc::On,
+            crc_autoclear: CrcAutoClear::Off,
+            address_filter: AddressFilter::Off,
+            crc_whitening: CrcWhitening::Ccitt,
+            data_mode: DataMode::Packet,
+            io_home: IoHome::Off,
+            beacon: Beacon::Off,
+            node_address: 0,
+            broadcast_address: 0,
+            invert_iq: false,
+            rx_continuous: false,
+            preamble: 0x0003,
         }
     }
 }
 
 /// Fsk radio channel configuration
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct FskChannel {
-    /// Channel bit-rate
-    bitrate: u16,
+     /// (G)FSK frequency in Hz (defaults to 434 MHz)
+    pub freq: u32,
 
-    /// Channel bandwidth
-    bandwidth: Bandwidth,
+    /// (G)FSK  channel baud-rate (defaults to 4.8kbps)
+    pub br: u32,
+
+    /// (G)FSK channel bandwidth
+    pub bw: Bandwidth,
+
+    /// (G)FSK AFC channel bandwidth
+    pub bw_afc: Bandwidth,
+
+    /// Frequency deviation in Hz (defaults to 5kHz)
+    pub fdev: u32,
 }
 
 impl Default for FskChannel {
     fn default() -> Self {
         Self {
-            bitrate: 0,
-            bandwidth: Bandwidth::Bw12500,
+            freq: 434e6 as u32,
+            br: 4_800_000,
+            bw: Bandwidth::Bw12500,
+            bw_afc: Bandwidth::Bw12500,
+            fdev: 5_000_000,
         }
     }
 }
@@ -92,9 +164,112 @@ pub enum Modulation {
     Ook = 0x20,
 }
 
+pub const PACKETFORMAT_MASK: u8 = 0x80;
+pub const PACKETFORMAT_VARIABLE: u8 = 0x80;
+pub const PACKETFORMAT_FIXED: u8 = 0x80;
+
+pub const DCFREE_MASK: u8 = 0x60;
+
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum DcFree {
+    Off = 0x00,
+    Manchester = 0x20,
+    Whitening = 0x40,
+}
+
+pub const CRC_MASK: u8 = 0x10;
+
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum Crc {
+    Off = 0x00,
+    On = 0x10,
+}
+
+pub const CRC_AUTOCLEAR_MASK: u8 = 0x08;
+
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum CrcAutoClear {
+    Off = 0x00,
+    On = 0x08,
+}
+
+pub const ADDRESS_FILTER_MASK: u8 = 0x08;
+
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum AddressFilter {
+    Off = 0x00,
+    Node = 0x02,
+    NodeBroadcast = 0x04,
+}
+
+pub const CRC_WHITENING_MASK: u8 = 0x01;
+
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum CrcWhitening {
+    Ccitt = 0x00,
+    Ibm = 0x01,
+}
+
+pub const WMBUS_CRC_MASK: u8 = 0x80;
+
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum WmbusCrc {
+    Off = 0x00,
+    On = 0x80,
+}
+
+pub const DATAMODE_MASK: u8 = 0x40;
+
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum DataMode {
+    Continuous = 0x00,
+    Packet = 0x40,
+}
+
+pub const IOHOME_MASK: u8 = 0x20;
+
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum IoHome {
+    Off = 0x00,
+    On = 0x20,
+}
+
+pub const BEACON_MASK: u8 = 0x08;
+
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum Beacon {
+    Off = 0x00,
+    On = 0x08,
+}
+
+pub const PAYLOADLEN_MSB_MASK: u8 = 0x07;
+
+
+pub const RXCONFIG_RESTARTRXONCOLLISION_MASK: u8    = 0x7F;
+pub const RXCONFIG_RESTARTRXONCOLLISION_ON: u8      = 0x80;
+pub const RXCONFIG_RESTARTRXONCOLLISION_OFF: u8     = 0x00; // Default
+
+pub const RXCONFIG_RESTARTRXWITHOUTPLLLOCK: u8      = 0x40; // Write only
+
+pub const RXCONFIG_RESTARTRXWITHPLLLOCK: u8         = 0x20; // Write only
+
+pub const RXCONFIG_AFCAUTO_MASK: u8                 = 0xEF;
+pub const RXCONFIG_AFCAUTO_ON: u8                   = 0x10;
+pub const RXCONFIG_AFCAUTO_OFF: u8                  = 0x00; // Default 
+
+pub const RXCONFIG_AGCAUTO_MASK: u8                 = 0xF7;
+pub const RXCONFIG_AGCAUTO_ON: u8                   = 0x08; // Default
+pub const RXCONFIG_AGCAUTO_OFF: u8                  = 0x00;
+
+pub const RXCONFIG_RXTRIGER_MASK: u8                = 0xF8;
+pub const RXCONFIG_RXTRIGER_OFF: u8                 = 0x00;
+pub const RXCONFIG_RXTRIGER_RSSI: u8                = 0x01;
+pub const RXCONFIG_RXTRIGER_PREAMBLEDETECT: u8      = 0x06; // Default
+pub const RXCONFIG_RXTRIGER_RSSI_PREAMBLEDETECT: u8 = 0x07;
+
 bitflags! {
     /// Interrupt flags register 1
-    struct Irq1: u8 {
+    pub struct Irq1: u8 {
         /// Set when a given mode request is complete
         const MODE_READY        = 0b1000_0000;
         /// Set in RSSI mode after RSSI, AGC and AFC
@@ -116,7 +291,7 @@ bitflags! {
 
 bitflags! {
     /// Interrupt flags register two
-    struct Irq2: u8 {
+    pub struct Irq2: u8 {
         /// Set when the FIFO is full
         const FIFO_FULL        = 0b1000_0000;
         /// Set when the FIFO is empty
@@ -135,3 +310,4 @@ bitflags! {
         const LOW_BAT   = 0b0000_0001;
     }
 }
+
