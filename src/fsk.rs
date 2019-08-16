@@ -8,7 +8,7 @@ use radio::{State as _, Channel as _, Interrupts as _};
 
 use crate::{Sx127x, Error};
 use crate::base::Base as Sx127xBase;
-use crate::device::{self, State, ModemMode, regs};
+use crate::device::{self, State, ModemMode, PacketInfo, regs};
 use crate::device::fsk::*;
 use crate::device::fsk::{Irq1, Irq2};
 
@@ -181,7 +181,7 @@ impl<Base, CommsError, PinError> radio::Receive for Sx127x<Base, CommsError, Pin
 where
     Base: Sx127xBase<CommsError, PinError>,
 {
-    type Info = FskInfo;
+    type Info = PacketInfo;
     type Error = Error<CommsError, PinError>;
 
     fn start_receive(&mut self) -> Result<(), Self::Error> {

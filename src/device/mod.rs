@@ -46,6 +46,25 @@ impl Default for Config {
 }
 
 
+/// LoRa Received packet information
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct PacketInfo {
+    /// Received Signal Strength Indication
+    pub rssi: i16,
+    /// Signal to Noise Ratio
+    pub snr: Option<i16>,
+}
+
+
+impl Default for PacketInfo {
+    fn default() -> Self {
+        Self {
+            rssi: 0,
+            snr: None,
+        }
+    }
+}
+
 /// Radio modem configuration contains fields for each modem mode
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Modem {

@@ -8,7 +8,7 @@ use radio::{State as _, Channel as _, Interrupts as _};
 
 use crate::{Sx127x, Error};
 use crate::base::Base as Sx127xBase;
-use crate::device::{self, State, Modem, Channel, ModemMode, regs};
+use crate::device::{self, State, Modem, Channel, ModemMode, PacketInfo, regs};
 use crate::device::lora::*;
 
 /// Empty struct for signalling LoRa operating mode
@@ -262,7 +262,7 @@ impl<Base, CommsError, PinError> radio::Receive for Sx127x<Base, CommsError, Pin
 where
     Base: Sx127xBase<CommsError, PinError>,
 {
-    type Info = LoRaInfo;
+    type Info = PacketInfo;
     type Error = Error<CommsError, PinError>;
 
     /// Start receive mode
@@ -365,7 +365,7 @@ where
 
         let (rssi, snr) = self.process_rssi_snr(rssi, snr);
         info.rssi = rssi;
-        info.snr = snr;
+        info.snr = Some(snr);
 
         debug!("FIFO RX {} bytes with fifo rx ptr: {}", n, r);
 

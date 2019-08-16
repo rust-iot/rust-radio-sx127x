@@ -55,7 +55,7 @@ fn integration() {
     let mut received = false;
     let mut buff = [0u8; 1024];
     let mut n = 0;
-    let mut info = LoRaInfo::default();
+    let mut info = PacketInfo::default();
 
     for _i in 0..10 {
         // Check TX state
