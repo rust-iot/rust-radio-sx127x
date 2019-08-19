@@ -73,7 +73,9 @@ fn main() {
             let config = LoRaConfig::default();
             let mut channel = LoRaChannel::default();
 
-            channel.freq = lora_config.freq;
+            if let Some(f) = lora_config.freq_mhz {
+                channel.freq = f * 1_000_000;
+            }
             
             let radio = radio.lora(&config, &channel).expect("error configuring lora mode");
 
@@ -81,7 +83,11 @@ fn main() {
         },
         Command::Gfsk(gfsk_config) => {
             let config = FskConfig::default();
-            let channel = FskChannel::default();
+            let mut channel = FskChannel::default();
+
+             if let Some(f) = gfsk_config.freq_mhz {
+                channel.freq = f * 1_000_000;
+            }
 
             let radio = radio.fsk(&config, &channel).expect("error configuring gfsk mode");
 

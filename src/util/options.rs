@@ -75,9 +75,9 @@ pub enum Operation {
 
 #[derive(StructOpt, PartialEq, Debug)]
 pub struct LoRaCommand {
-    /// LoRa frequency in Hz (defaults to 434 MHz)
-    #[structopt(long = "freq", default_value="434_000_000")]
-    pub freq: u32,
+    /// LoRa frequency in MHz
+    #[structopt(long = "freq-mhz")]
+    pub freq_mhz: Option<u32>,
 
     #[structopt(subcommand)]
     /// Operation to execute
@@ -86,9 +86,9 @@ pub struct LoRaCommand {
 
 #[derive(StructOpt, PartialEq, Debug)]
 pub struct GfskCommand {
-    /// GFSK frequency in Hz (defaults to 434 MHz)
-    #[structopt(long = "freq", default_value="434_000_000")]
-    pub freq: u32,
+    /// GFSK frequency in MHz
+    #[structopt(long = "freq-mhz")]
+    pub freq_mhz: Option<u32>,
 
     #[structopt(subcommand)]
     /// Operation to execute
