@@ -206,7 +206,8 @@ where
         s.configure_lora(lora_config, lora_channel)?;
 
         // Configure power amplifier
-        s.configure_pa(&s.config.pa_config.clone())?;
+        let pa_config = s.config.pa_config.clone();
+        s.configure_pa(&pa_config)?;
 
         // Return new object
         Ok(s)
@@ -234,7 +235,8 @@ where
         s.configure_fsk(fsk_config, fsk_channel)?;
 
         // Configure power amplifier
-        s.configure_pa(&s.config.pa_config.clone())?;
+        let pa_config = s.config.pa_config.clone();
+        s.configure_pa(&pa_config)?;
 
         // Return new object
         Ok(s)

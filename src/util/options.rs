@@ -3,6 +3,7 @@ use structopt::StructOpt;
 use simplelog::{LevelFilter};
 use humantime::{Duration as HumanDuration};
 
+
 #[derive(StructOpt)]
 #[structopt(name = "Sx127x-util")]
 /// A Command Line Interface (CLI) for interacting with a local Sx127x radio device
@@ -40,7 +41,7 @@ pub struct Options {
 #[derive(StructOpt, PartialEq, Debug)]
 pub enum Command {
     #[structopt(name="chip-version")]
-    /// Fetch the device firmware version
+    /// Fetch the device silicon/firmware version
     SiliconVersion,
 
     #[structopt(name="lora")]
