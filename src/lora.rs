@@ -23,10 +23,14 @@ where
     pub fn configure_lora(&mut self, config: &LoRaConfig, channel: &LoRaChannel) -> Result<(), Error<CommsError, PinError>> {
         debug!("Configuring lora mode");
 
+        // Update internal config
+        self.config.channel = Channel::LoRa(channel.clone());
+        self.config.modem = Modem::LoRa(config.clone());
+
         // Switch to sleep to change modem mode
         self.set_state(State::Sleep)?;
 
-        // Switch to LoRa mode
+        // Switch to LoRa mode (this must happen before set_channel)
         self.set_modem(ModemMode::LoRa)?;
 
         // Set channel configuration
@@ -52,9 +56,6 @@ where
         }
 
         //self.configure_pa(config.pa_config)?;
-
-        self.config.channel = Channel::LoRa(channel.clone());
-        self.config.modem = Modem::LoRa(config.clone());
 
         Ok(())
     }
