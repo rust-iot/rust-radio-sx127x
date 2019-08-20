@@ -180,12 +180,18 @@ where
     }
 }
 
-impl<Base, CommsError, PinError, Mode> Sx127x<Base, CommsError, PinError, Mode>
+pub trait Configure<Base, CommsError, PinError, Mode>  {
+    fn lora(self, lora_config: &LoRaConfig, lora_channel: &LoRaChannel) -> Result<Sx127x<Base, CommsError, PinError, LoRaMode>, Error<CommsError, PinError>>;
+    
+    fn fsk(self, fsk_config: &FskConfig, fsk_channel: &FskChannel) -> Result<Sx127x<Base, CommsError, PinError, FskOokMode>, Error<CommsError, PinError>>;
+}
+
+impl<Base, CommsError, PinError, Mode> Configure<Base, CommsError, PinError, Mode>  for Sx127x<Base, CommsError, PinError, Mode>
 where
     Base: base::Base<CommsError, PinError>,
 {
     /// Configure the modem into LoRa mode
-    pub fn lora(self, lora_config: &LoRaConfig, lora_channel: &LoRaChannel) -> Result<Sx127x<Base, CommsError, PinError, LoRaMode>, Error<CommsError, PinError>> {
+    fn lora(self, lora_config: &LoRaConfig, lora_channel: &LoRaChannel) -> Result<Sx127x<Base, CommsError, PinError, LoRaMode>, Error<CommsError, PinError>> {
         // Destructure existing object
         let Self{hal, config, _mode, _ce, _pe} = self;
 
@@ -214,7 +220,7 @@ where
     }
 
     /// Configure the modem into FSK/OOK mode
-    pub fn fsk(self, fsk_config: &FskConfig, fsk_channel: &FskChannel) -> Result<Sx127x<Base, CommsError, PinError, FskOokMode>, Error<CommsError, PinError>> {
+    fn fsk(self, fsk_config: &FskConfig, fsk_channel: &FskChannel) -> Result<Sx127x<Base, CommsError, PinError, FskOokMode>, Error<CommsError, PinError>> {
         // Destructure existing object
         let Self{hal, config, _mode, _ce, _pe} = self;
 
@@ -259,7 +265,15 @@ where
             _pe: PhantomData,
         }
     }
+}
 
+impl<Base, CommsError, PinError, Mode> delay::DelayMs<u32> for Sx127x<Base, CommsError, PinError, Mode>
+where
+    Base: base::Base<CommsError, PinError>,
+{
+    fn delay_ms(&mut self, t: u32) {
+        self.hal.delay_ms(t)
+    }
 }
 
 impl<Base, CommsError, PinError, Config> Sx127x<Base, CommsError, PinError, Config>
@@ -387,6 +401,7 @@ where
     }
 
     pub(crate) fn set_state_checked(&mut self, state: State) -> Result<(), Error<CommsError, PinError>> {
+        trace!("Set state to: {:?}", state);
         self.set_state(state)?;
         loop {
             let s = self.get_state()?;

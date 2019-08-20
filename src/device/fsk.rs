@@ -39,6 +39,15 @@ pub struct FskConfig {
     /// Enable beacon mode in fixed packet format
     pub beacon: Beacon,
 
+    /// Receive mode Auto Frequency Compensation (AFC)
+    pub rx_afc: RxAfc,
+
+    /// Receive mode Auto Gain Compensation (AGC)
+    pub rx_agc: RxAgc,
+
+    /// Receive mode trigger
+    pub rx_trigger: RxTrigger,
+
     /// Node address for filtering
     pub node_address: u8,
 
@@ -61,13 +70,16 @@ impl Default for FskConfig {
             preamble_len: 0x8,
             payload_len: PayloadLength::Variable,
             dc_free: DcFree::Off,
-            crc: Crc::On,
+            crc: Crc::Off,
             crc_autoclear: CrcAutoClear::Off,
             address_filter: AddressFilter::Off,
             crc_whitening: CrcWhitening::Ccitt,
             data_mode: DataMode::Packet,
             io_home: IoHome::Off,
             beacon: Beacon::Off,
+            rx_afc: RxAfc::On,
+            rx_agc: RxAgc::On,
+            rx_trigger: RxTrigger::Off,
             node_address: 0,
             broadcast_address: 0,
             invert_iq: false,
@@ -101,17 +113,12 @@ impl Default for FskChannel {
     fn default() -> Self {
         Self {
             freq: 434e6 as u32,
-            br: 4_800_000,
+            br: 4.8e3 as u32,
             bw: Bandwidth::Bw12500,
             bw_afc: Bandwidth::Bw12500,
             fdev: 5_000_000,
         }
     }
-}
-
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct FskInfo {
-
 }
 
 // FSK bandwidth register values
@@ -244,6 +251,10 @@ pub enum Beacon {
 
 pub const PAYLOADLEN_MSB_MASK: u8 = 0x07;
 
+pub const TX_START_FIFOLEVEL: u8 = 0x00;
+pub const TX_START_FIFOEMPTY: u8 = 0x80;
+
+pub const TX_FIFOTHRESH_MASK: u8 = 0x1f;
 
 pub const RXCONFIG_RESTARTRXONCOLLISION_MASK: u8    = 0x7F;
 pub const RXCONFIG_RESTARTRXONCOLLISION_ON: u8      = 0x80;
@@ -254,18 +265,33 @@ pub const RXCONFIG_RESTARTRXWITHOUTPLLLOCK: u8      = 0x40; // Write only
 pub const RXCONFIG_RESTARTRXWITHPLLLOCK: u8         = 0x20; // Write only
 
 pub const RXCONFIG_AFCAUTO_MASK: u8                 = 0xEF;
-pub const RXCONFIG_AFCAUTO_ON: u8                   = 0x10;
-pub const RXCONFIG_AFCAUTO_OFF: u8                  = 0x00; // Default 
 
 pub const RXCONFIG_AGCAUTO_MASK: u8                 = 0xF7;
-pub const RXCONFIG_AGCAUTO_ON: u8                   = 0x08; // Default
-pub const RXCONFIG_AGCAUTO_OFF: u8                  = 0x00;
 
 pub const RXCONFIG_RXTRIGER_MASK: u8                = 0xF8;
-pub const RXCONFIG_RXTRIGER_OFF: u8                 = 0x00;
-pub const RXCONFIG_RXTRIGER_RSSI: u8                = 0x01;
-pub const RXCONFIG_RXTRIGER_PREAMBLEDETECT: u8      = 0x06; // Default
-pub const RXCONFIG_RXTRIGER_RSSI_PREAMBLEDETECT: u8 = 0x07;
+
+/// Receive mode Auto Frequency Calibration (AFC)
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum RxAfc {
+    On = 0x10,
+    Off = 0x00,
+}
+
+/// Receive mode Auto Gain Compensation (AGC)
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum RxAgc {
+    On = 0x08,
+    Off = 0x00,
+}
+
+/// Receive mode trigger configuration
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum RxTrigger {
+    Off = 0x00,
+    Rssi = 0x01,
+    PreambleDetect = 0x06,
+    RssiPreambleDetect = 0x07,
+}
 
 bitflags! {
     /// Interrupt flags register 1

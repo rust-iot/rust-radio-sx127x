@@ -8,7 +8,7 @@ use radio::{State as _, Channel as _, Interrupts as _};
 
 use crate::{Sx127x, Error};
 use crate::base::Base as Sx127xBase;
-use crate::device::{self, State, ModemMode, PacketInfo, regs};
+use crate::device::{self, State, Modem, ModemMode, PacketInfo, regs};
 use crate::device::fsk::*;
 use crate::device::fsk::{Irq1, Irq2};
 
@@ -47,11 +47,11 @@ where
         let (packet_format, packet_len_msb) = match config.payload_len {
             PayloadLength::Constant(v) => {
                 self.write_reg(regs::Fsk::PAYLOADLENGTH, v as u8)?;
-                (PACKETFORMAT_VARIABLE, (v >> 8) & 0x07)
+                (PACKETFORMAT_FIXED, (v >> 8) & 0x07)
             },
             PayloadLength::Variable => {
                 self.write_reg(regs::Fsk::PAYLOADLENGTH, 0xFF)?;
-                (PACKETFORMAT_FIXED, 0)
+                (PACKETFORMAT_VARIABLE, 0)
             }
         };
 
@@ -71,7 +71,19 @@ where
         self.write_reg(regs::Fsk::PREAMBLEMSB, (config.preamble >> 8) as u8)?;
         self.write_reg(regs::Fsk::PREAMBLELSB, config.preamble as u8)?;
 
+        // Configure TXStart
+        self.hal.write_reg(regs::Fsk::FIFOTHRESH as u8, 
+            TX_START_FIFOLEVEL | (TX_FIFOTHRESH_MASK & 0x02)
+        )?;
+
         Ok(())
+    }
+
+    fn config(&self) -> &FskConfig {
+        match &self.config.modem {
+            Modem::FskOok(c) => c,
+            _ => panic!("Attempted to fetch config from invalid mode")
+        }
     }
 
 }
@@ -151,6 +163,9 @@ where
 
         self.set_state_checked(State::Standby)?;
 
+        let (i1, i2) = self.get_interrupts(true)?;
+        trace!("clearing interrupts (irq1: {:?} irq2: {:?})", i1, i2);
+
         // Write length as first element in buffer
         self.hal.write_buff(&[data.len() as u8])?;
 
@@ -166,7 +181,9 @@ where
     /// Check for packet send completion
     fn check_transmit(&mut self) -> Result<bool, Error<CommsError, PinError>> {
         // Fetch interrupts
-        let (_i1, i2) = self.get_interrupts(true)?;
+        let (i1, i2) = self.get_interrupts(true)?;
+
+        trace!("Check transmit IRQ1: {:?} IRQ2: {:?}", i1, i2);
 
         // Check for completion
         if i2.contains(Irq2::PACKET_SENT) {
@@ -191,12 +208,18 @@ where
         self.set_state_checked(State::Standby)?;
 
         // Set RX configuration
-        self.write_reg(regs::Fsk::RXCONFIG, 
-            RXCONFIG_AFCAUTO_ON | RXCONFIG_AGCAUTO_ON | RXCONFIG_RXTRIGER_PREAMBLEDETECT
-        )?;
+        let rx_config = self.config().rx_agc as u8 | self.config().rx_afc as u8
+        | self.config().rx_trigger as u8;
+        self.write_reg(regs::Fsk::RXCONFIG, rx_config)?;
+
+        // Clear interrupts
+        let (i1, i2) = self.get_interrupts(true)?;
+        debug!("clearing interrupts (irq1: {:?} irq2: {:?})", i1, i2);
 
         // Enter Rx mode
-        self.set_state_checked(State::RxOnce)?;
+        self.set_state_checked(State::Rx)?;
+
+        debug!("started receive");
 
         Ok(())
     }
@@ -209,7 +232,10 @@ where
     fn check_receive(&mut self, restart: bool) -> Result<bool, Self::Error> {
         // Fetch interrupts
         let (i1, i2) = self.get_interrupts(true)?;
+        let s = self.get_state()?;
         let mut res = Ok(false);
+
+        debug!("check receive (state: {:?}, irq1: {:?} irq2: {:?})", s, i1, i2);
 
         // Check for completion
         if i2.contains(Irq2::PAYLOAD_READY) {

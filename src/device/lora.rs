@@ -61,25 +61,6 @@ impl Default for LoRaChannel {
     }
 }
 
-/// LoRa Received packet information
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct LoRaInfo {
-    /// Received Signal Strength Indication
-    pub rssi: i16,
-    /// Signal to Noise Ratio
-    pub snr: i16,
-}
-
-
-impl Default for LoRaInfo {
-    fn default() -> Self {
-        Self {
-            rssi: 0,
-            snr: 0,
-        }
-    }
-}
-
 pub const BANDWIDTH_MASK: u8 = 0b1111_0000;
 
 /// LoRa channel bandwidth in kHz
