@@ -1,5 +1,5 @@
 //! Sx127x FSK mode definitions
-//! 
+//!
 //! Copyright 2019 Ryan Kurte
 
 pub use super::common::*;
@@ -8,7 +8,6 @@ pub use super::common::*;
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct FskConfig {
-
     /// Preamble length in symbols (defaults to 0x8)
     pub preamble_len: u16,
 
@@ -93,7 +92,7 @@ impl Default for FskConfig {
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct FskChannel {
-     /// (G)FSK frequency in Hz (defaults to 434 MHz)
+    /// (G)FSK frequency in Hz (defaults to 434 MHz)
     pub freq: u32,
 
     /// (G)FSK  channel baud-rate (defaults to 4.8kbps)
@@ -148,7 +147,6 @@ pub enum Bandwidth {
 }
 
 pub const OPMODE_LRMODE_MASK: u8 = 0x80;
-
 
 pub const OPMODE_SHAPING_MASK: u8 = 0b0001_1000;
 
@@ -256,19 +254,19 @@ pub const TX_START_FIFOEMPTY: u8 = 0x80;
 
 pub const TX_FIFOTHRESH_MASK: u8 = 0x1f;
 
-pub const RXCONFIG_RESTARTRXONCOLLISION_MASK: u8    = 0x7F;
-pub const RXCONFIG_RESTARTRXONCOLLISION_ON: u8      = 0x80;
-pub const RXCONFIG_RESTARTRXONCOLLISION_OFF: u8     = 0x00; // Default
+pub const RXCONFIG_RESTARTRXONCOLLISION_MASK: u8 = 0x7F;
+pub const RXCONFIG_RESTARTRXONCOLLISION_ON: u8 = 0x80;
+pub const RXCONFIG_RESTARTRXONCOLLISION_OFF: u8 = 0x00; // Default
 
-pub const RXCONFIG_RESTARTRXWITHOUTPLLLOCK: u8      = 0x40; // Write only
+pub const RXCONFIG_RESTARTRXWITHOUTPLLLOCK: u8 = 0x40; // Write only
 
-pub const RXCONFIG_RESTARTRXWITHPLLLOCK: u8         = 0x20; // Write only
+pub const RXCONFIG_RESTARTRXWITHPLLLOCK: u8 = 0x20; // Write only
 
-pub const RXCONFIG_AFCAUTO_MASK: u8                 = 0xEF;
+pub const RXCONFIG_AFCAUTO_MASK: u8 = 0xEF;
 
-pub const RXCONFIG_AGCAUTO_MASK: u8                 = 0xF7;
+pub const RXCONFIG_AGCAUTO_MASK: u8 = 0xF7;
 
-pub const RXCONFIG_RXTRIGER_MASK: u8                = 0xF8;
+pub const RXCONFIG_RXTRIGER_MASK: u8 = 0xF8;
 
 /// Receive mode Auto Frequency Calibration (AFC)
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -336,4 +334,3 @@ bitflags! {
         const LOW_BAT   = 0b0000_0001;
     }
 }
-

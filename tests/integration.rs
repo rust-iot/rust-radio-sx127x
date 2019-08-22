@@ -1,5 +1,5 @@
 //! Sx127x Integration testing
-//! 
+//!
 //! Copyright 2019 Ryan Kurte
 
 use std::collections::HashMap;
@@ -7,7 +7,7 @@ use std::thread;
 use std::time::Duration;
 
 extern crate embedded_spi;
-use embedded_spi::utils::{DeviceConfig, load_config};
+use embedded_spi::utils::{load_config, DeviceConfig};
 
 extern crate radio_sx127x;
 use radio_sx127x::prelude::*;
@@ -31,14 +31,11 @@ fn integration() {
 
     let config1 = configs.get("radio-0").expect("Missing radio-0 object");
     let config2 = configs.get("radio-1").expect("Missing radio-1 object");
-    
+
     let (w1, w2) = (config1.load(), config2.load());
 
-    let radio1 = Sx127x::new(w1).expect("error creating radio1");
-    let mut radio1 = radio1.lora(&LoRaConfig::default(), &LoRaChannel::default()).unwrap();
-
-    let radio2 = Sx127x::new(w2).expect("error creating radio1");
-    let mut radio2 = radio2.lora(&LoRaConfig::default(), &LoRaChannel::default()).unwrap();
+    let mut radio1 = Sx127x::new(w1, &Config::default()).expect("error creating radio1");
+    let mut radio2 = Sx127x::new(w2, &Config::default()).expect("error creating radio1");
 
     println!("Testing send/receive");
 
@@ -77,5 +74,4 @@ fn integration() {
     assert!(sent, "Send not completed");
     assert!(received, "Receive not completed");
     assert_eq!(data, &buff[..n]);
-
 }

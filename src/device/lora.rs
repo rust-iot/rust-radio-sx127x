@@ -1,5 +1,5 @@
 //! Sx127x LoRa mode definitions
-//! 
+//!
 //! Copyright 2019 Ryan Kurte
 
 pub use super::common::*;
@@ -70,11 +70,11 @@ pub enum Bandwidth {
     /// 62.5kHz bandwidth
     //Bandwidth62_5kHz = 0b0110_0000,
     /// 125kHz bandwidth
-    Bw125kHz  = 0b0111_0000,
+    Bw125kHz = 0b0111_0000,
     /// 250kHz bandwidth
-    Bw250kHz  = 0b1000_0000,
+    Bw250kHz = 0b1000_0000,
     /// 500kHz bandwidth
-    Bw500kHz  = 0b1001_0000,
+    Bw500kHz = 0b1001_0000,
 }
 
 pub const SPREADING_FACTOR_MASK: u8 = 0b1111_0000;
@@ -83,17 +83,17 @@ pub const SPREADING_FACTOR_MASK: u8 = 0b1111_0000;
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum SpreadingFactor {
     /// Sf6: 64 chips / symbol
-    Sf6 = 0b0110_0000, 
+    Sf6 = 0b0110_0000,
     /// Sf7: 128 chips / symbol
-    Sf7 = 0b0111_0000, 
+    Sf7 = 0b0111_0000,
     /// Sf8: 256 chips / symbol
-    Sf8 = 0b1000_0000, 
+    Sf8 = 0b1000_0000,
     /// Sf9: 512 chips / symbol
-    Sf9 = 0b1001_0000, 
+    Sf9 = 0b1001_0000,
     /// Sf10: 1024 chips / symbol
-    Sf10 = 0b1010_0000, 
+    Sf10 = 0b1010_0000,
     /// Sf11: 2048 chips / symbol
-    Sf11 = 0b1011_0000, 
+    Sf11 = 0b1011_0000,
     /// Sf12: 4096 chips / symbol
     Sf12 = 0b1100_0000,
 }
@@ -112,10 +112,9 @@ pub enum CodingRate {
     Cr4_8 = 0b0000_1000,
 }
 
-pub const IMPLICITHEADER_MASK:    u8 = 0b0000_0001;
-pub const IMPLICITHEADER_ENABLE:  u8 = 0b0000_0001;
+pub const IMPLICITHEADER_MASK: u8 = 0b0000_0001;
+pub const IMPLICITHEADER_ENABLE: u8 = 0b0000_0001;
 pub const IMPLICITHEADER_DISABLE: u8 = 0b0000_0000;
-
 
 pub const RXPAYLOADCRC_MASK: u8 = 0b0000_0100;
 
@@ -123,11 +122,10 @@ pub const RXPAYLOADCRC_MASK: u8 = 0b0000_0100;
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum PayloadCrc {
     Disabled = 0x00,
-    Enabled  = 0x04,
+    Enabled = 0x04,
 }
 
 pub const SYMBTIMEOUTMSB_MASK: u8 = 0b0000_0011;
-
 
 pub const ACG_AUTO_ON_MASK: u8 = 0b0000_0100;
 pub const ACG_AUTO_ON_ENABLED: u8 = 0b0000_0100;
@@ -145,8 +143,8 @@ pub enum LowDatarateOptimise {
 }
 
 pub const PLLHOP_FASTHOP_MASK: u8 = 0b1000_0000;
-pub const PLLHOP_FASTHOP_ON:   u8 = 0b1000_0000;
-pub const PLLHOP_FASTHOP_OFF:   u8 = 0b0000_0000;
+pub const PLLHOP_FASTHOP_ON: u8 = 0b1000_0000;
+pub const PLLHOP_FASTHOP_OFF: u8 = 0b0000_0000;
 
 /// Frequency hopping configuration
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
@@ -164,7 +162,6 @@ pub const AUTOMATICIF_MASK: u8 = 0b1000_0000;
 pub const AUTOMATICIF_ON: u8 = 0b1000_0000;
 pub const AUTOMATICIF_OFF: u8 = 0b0000_0000;
 
-
 /// LoRa detection optimization mode
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum DetectionOptimize {
@@ -174,18 +171,15 @@ pub enum DetectionOptimize {
     Sf6 = 0x05,
 }
 
-
 pub const INVERTIQ_RX_MASK: u8 = 0xBF;
-pub const INVERTIQ_RX_OFF:  u8 = 0x00;
-pub const INVERTIQ_RX_ON:   u8 = 0x40;
+pub const INVERTIQ_RX_OFF: u8 = 0x00;
+pub const INVERTIQ_RX_ON: u8 = 0x40;
 pub const INVERTIQ_TX_MASK: u8 = 0xFE;
-pub const INVERTIQ_TX_OFF:  u8 = 0x01;
-pub const INVERTIQ_TX_ON:   u8 = 0x00;
+pub const INVERTIQ_TX_OFF: u8 = 0x01;
+pub const INVERTIQ_TX_ON: u8 = 0x00;
 
-pub const INVERTIQ2_ON:  u8 = 0x19;
+pub const INVERTIQ2_ON: u8 = 0x19;
 pub const INVERTIQ2_OFF: u8 = 0x1D;
-
-
 
 bitflags! {
     /// Interrupt flags register 1
@@ -218,7 +212,7 @@ bitflags! {
         const HEADER_VALID        = 0b0000_1000;
 
         const RX_ONGOING          = 0b0000_0100;
-        
+
         const SIGNAL_SYNCHRONIZED = 0b0000_0010;
 
         const SIGNAL_DETECTED     = 0b0000_0001;

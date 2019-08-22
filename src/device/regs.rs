@@ -1,5 +1,5 @@
 //! SX127x Register Definitions
-//! 
+//!
 //! Copyright 2019 Ryan Kurte
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -131,8 +131,6 @@ pub enum LoRa {
     INVERTIQ2 = 0x3B,
 }
 
-
-
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Fsk {
     BITRATEMSB = 0x02,
@@ -197,13 +195,12 @@ pub enum Fsk {
     IRQFLAGS2 = 0x3F,
 }
 
+pub const RF_IMAGECAL_AUTOIMAGECAL_MASK: u8 = 0x7F;
+pub const RF_IMAGECAL_AUTOIMAGECAL_ON: u8 = 0x80;
+pub const RF_IMAGECAL_AUTOIMAGECAL_OFF: u8 = 0x00;
 
-pub const RF_IMAGECAL_AUTOIMAGECAL_MASK:    u8 = 0x7F;
-pub const RF_IMAGECAL_AUTOIMAGECAL_ON:      u8 = 0x80;
-pub const RF_IMAGECAL_AUTOIMAGECAL_OFF:     u8 = 0x00;
+pub const RF_IMAGECAL_IMAGECAL_MASK: u8 = 0xBF;
+pub const RF_IMAGECAL_IMAGECAL_START: u8 = 0x40;
 
-pub const RF_IMAGECAL_IMAGECAL_MASK:        u8 = 0xBF;
-pub const RF_IMAGECAL_IMAGECAL_START:       u8 = 0x40;
-
-pub const RF_IMAGECAL_IMAGECAL_RUNNING:     u8 = 0x20;
-pub const RF_IMAGECAL_IMAGECAL_DONE:        u8 = 0x00;
+pub const RF_IMAGECAL_IMAGECAL_RUNNING: u8 = 0x20;
+pub const RF_IMAGECAL_IMAGECAL_DONE: u8 = 0x00;
