@@ -264,13 +264,13 @@ where
     /// has completed
     pub(crate) fn lora_check_transmit(&mut self) -> Result<bool, Error<CommsError, PinError>> {
         let irq = self.lora_get_interrupts(true)?;
-        debug!("Poll check send, irq: {:?}", irq);
+        trace!("Poll check send, irq: {:?}", irq);
 
         if irq.contains(Irq::TX_DONE) {
             debug!("Send complete!");
             Ok(true)
         } else {
-            debug!("Send pending");
+            trace!("Send pending");
             Ok(false)
         }
     }
@@ -344,7 +344,7 @@ where
         let mut res = Ok(false);
 
         if !irq.is_empty() {
-            debug!("Poll check receive, irq: {:?}", irq);
+            trace!("Poll check receive, irq: {:?}", irq);
         }
 
         // Process flags
@@ -392,7 +392,7 @@ where
         info.rssi = rssi;
         info.snr = Some(snr);
 
-        debug!("FIFO RX {} bytes with fifo rx ptr: {}", n, r);
+        trace!("FIFO RX {} bytes with fifo rx ptr: {}", n, r);
 
         // Update FIFO pointer to current RX address
         self.write_reg(regs::LoRa::FIFOADDRPTR, r)?;
@@ -410,7 +410,7 @@ where
         // Read data from FIFO
         self.hal.read_buff(&mut data[0..n])?;
 
-        debug!("Read data: {:?}", &data[0..n]);
+        debug!("Received data: {:?} info: {:?}", &data[0..n], &info);
 
         Ok(n)
     }
