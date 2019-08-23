@@ -187,7 +187,7 @@ where
             (Modem::FskOok(fsk_modem), Channel::FskOok(fsk_channel)) => {
                 self.fsk_configure(fsk_modem, fsk_channel)?;
             }
-            _ => panic!("Invalid configuration, mismatch between Modem and Channel modes"),
+            _ => panic!("Invalid configuration, mismatch between Modem ({:?}) and Channel ({:?}  modes", &config.modem, &config.channel),
         }
 
         // Configure power amplifier

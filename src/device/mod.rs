@@ -37,8 +37,8 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            modem: Modem::None,
-            channel: Channel::None,
+            modem: Modem::LoRa(LoRaConfig::default()),
+            channel: Channel::LoRa(LoRaChannel::default()),
             pa_config: PaConfig::default(),
             xtal_freq: 32000000,
         }
