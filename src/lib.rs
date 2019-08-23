@@ -34,7 +34,7 @@ use radio::{Power as _, State as _};
 pub mod base;
 
 pub mod device;
-use device::{regs, Channel, Config, Modem, ModemMode, PaConfig, PacketInfo, State};
+use device::{regs, Channel, Interrupts, Config, Modem, ModemMode, PaConfig, PacketInfo, State};
 
 pub mod fsk;
 pub mod lora;
@@ -496,15 +496,15 @@ impl<Base, CommsError, PinError> radio::Interrupts for Sx127x<Base, CommsError, 
 where
     Base: base::Base<CommsError, PinError>,
 {
-    type Irq = device::Interrupts;
+    type Irq = Interrupts;
     type Error = Error<CommsError, PinError>;
 
     /// Fetch pending interrupts from the device
     /// If the clear option is set, this will also clear any pending flags
     fn get_interrupts(&mut self, clear: bool) -> Result<Self::Irq, Self::Error> {
         match self.mode {
-            Mode::LoRa => Ok(Self::Irq::LoRa(self.lora_get_interrupts(clear)?)),
-            Mode::FskOok => Ok(Self::Irq::FskOok(self.fsk_get_interrupts(clear)?)),
+            Mode::LoRa => Ok(Interrupts::LoRa(self.lora_get_interrupts(clear)?)),
+            Mode::FskOok => Ok(Interrupts::FskOok(self.fsk_get_interrupts(clear)?)),
             _ => Err(Error::InvalidConfiguration),
         }
     }
