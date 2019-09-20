@@ -26,6 +26,11 @@ Install the utility with one of the following methods:
 - using a precompiled binary from the [releases](https://github.com/ryankurte/rust-radio-sx127x/releases/) page
 - from source using cargo with `cargo install radio-sx127x`
 
+## As a `no_std` Library
+
+The radio-sx127x crate can be used as an interface library for the sx127x radio on other
+embedded devices.  To enable `no_std` usage, add `default-features = false` to your
+`Cargo.toml`
 
 
 ## Useful Resources
