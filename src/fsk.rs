@@ -144,13 +144,16 @@ where
         // Set frequency
         self.set_frequency(channel.freq)?;
 
+        // Calculate channel configuration
+        let fdev = ((channel.fdev as f32) / device::FREQ_STEP).round() as u32;
+        let datarate = (self.config.xtal_freq as f32 / channel.br as f32).round() as u32;
+        trace!("fdev: {} bitrate: {}", fdev, datarate);
+
         // Set frequency deviation
-        let fdev = ((channel.fdev as f32) / device::FREQ_STEP) as u32;
         self.write_reg(regs::Fsk::FDEVMSB, (fdev >> 8) as u8)?;
         self.write_reg(regs::Fsk::FDEVLSB, (fdev & 0xFF) as u8)?;
 
         // Set bitrate
-        let datarate = self.config.xtal_freq / channel.br;
         self.write_reg(regs::Fsk::BITRATEMSB, (datarate >> 8) as u8)?;
         self.write_reg(regs::Fsk::BITRATELSB, (datarate & 0xFF) as u8)?;
 
@@ -242,7 +245,7 @@ where
         let s = self.get_state()?;
         let mut res = Ok(false);
 
-        debug!(
+        trace!(
             "check receive (state: {:?}, irq1: {:?} irq2: {:?})",
             s, i1, i2
         );

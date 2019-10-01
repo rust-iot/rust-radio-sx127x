@@ -68,8 +68,8 @@ impl Default for FskConfig {
         Self {
             preamble_len: 0x8,
             payload_len: PayloadLength::Variable,
-            dc_free: DcFree::Off,
-            crc: Crc::Off,
+            dc_free: DcFree::Whitening,
+            crc: Crc::On,
             crc_autoclear: CrcAutoClear::Off,
             address_filter: AddressFilter::Off,
             crc_whitening: CrcWhitening::Ccitt,
@@ -95,7 +95,7 @@ pub struct FskChannel {
     /// (G)FSK frequency in Hz (defaults to 434 MHz)
     pub freq: u32,
 
-    /// (G)FSK  channel baud-rate (defaults to 4.8kbps)
+    /// (G)FSK  channel baud-rate (defaults to 5kbps)
     pub br: u32,
 
     /// (G)FSK channel bandwidth
@@ -111,11 +111,11 @@ pub struct FskChannel {
 impl Default for FskChannel {
     fn default() -> Self {
         Self {
-            freq: 434e6 as u32,
-            br: 4.8e3 as u32,
+            freq: 434_000_000,
+            br: 4_800,
             bw: Bandwidth::Bw12500,
             bw_afc: Bandwidth::Bw12500,
-            fdev: 5_000_000,
+            fdev: 5_000,
         }
     }
 }
@@ -194,8 +194,8 @@ pub const CRC_AUTOCLEAR_MASK: u8 = 0x08;
 
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum CrcAutoClear {
-    Off = 0x00,
-    On = 0x08,
+    Off = 0x08,
+    On = 0x00,
 }
 
 pub const ADDRESS_FILTER_MASK: u8 = 0x08;

@@ -271,8 +271,8 @@ where
                 self.set_state(State::Sleep)?;
                 self.update_reg(
                     regs::Common::OPMODE,
-                    device::OPMODE_LONGRANGEMODE_MASK,
-                    device::LongRangeMode::Off as u8,
+                    device::OPMODE_LONGRANGEMODE_MASK | device::OPMODE_MODULATION_MASK,
+                    device::LongRangeMode::Off as u8 | device::ModulationType::Fsk as u8,
                 )?;
             }
             ModemMode::LoRa => {

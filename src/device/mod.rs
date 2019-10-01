@@ -142,6 +142,14 @@ pub enum LongRangeMode {
     On = 0x80,
 }
 
+pub const OPMODE_MODULATION_MASK: u8 = 0b0110_0000;
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum ModulationType {
+    Fsk = 0b0000_0000,
+    Ook = 0b0010_0000,
+}
+
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum ModemMode {
     Standard,
