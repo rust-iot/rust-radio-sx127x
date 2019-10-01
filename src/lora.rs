@@ -347,6 +347,12 @@ where
             trace!("Poll check receive, irq: {:?}", irq);
         }
 
+        let state = self.get_state()?;
+        if state != State::Rx {
+            warn!("Check receive unexpected state: {:?}", state);
+            res = Err(Error::Aborted);
+        }
+
         // Process flags
 
         if irq.contains(Irq::RX_DONE) {

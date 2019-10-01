@@ -78,7 +78,7 @@ impl Default for FskConfig {
             beacon: Beacon::Off,
             rx_afc: RxAfc::On,
             rx_agc: RxAgc::On,
-            rx_trigger: RxTrigger::Off,
+            rx_trigger: RxTrigger::PreambleDetect,
             node_address: 0,
             broadcast_address: 0,
             invert_iq: false,
@@ -258,14 +258,12 @@ pub const RXCONFIG_RESTARTRXONCOLLISION_MASK: u8 = 0x7F;
 pub const RXCONFIG_RESTARTRXONCOLLISION_ON: u8 = 0x80;
 pub const RXCONFIG_RESTARTRXONCOLLISION_OFF: u8 = 0x00; // Default
 
+pub const RXCONFIG_RESTARTRX_PLL_MASK: u8 = 0b0110_0000;
 pub const RXCONFIG_RESTARTRXWITHOUTPLLLOCK: u8 = 0x40; // Write only
-
 pub const RXCONFIG_RESTARTRXWITHPLLLOCK: u8 = 0x20; // Write only
 
 pub const RXCONFIG_AFCAUTO_MASK: u8 = 0xEF;
-
 pub const RXCONFIG_AGCAUTO_MASK: u8 = 0xF7;
-
 pub const RXCONFIG_RXTRIGER_MASK: u8 = 0xF8;
 
 /// Receive mode Auto Frequency Calibration (AFC)
@@ -290,6 +288,25 @@ pub enum RxTrigger {
     PreambleDetect = 0x06,
     RssiPreambleDetect = 0x07,
 }
+
+/// Control preamble detector state
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum PreambleDetect {
+    On = 0x80,
+    Off = 0x00,
+}
+
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub enum PreambleDetectSize {
+    /// Interrupt on one byte
+    Ps1 = 0b0000_0000,
+    /// Interrupt on two bytes
+    Ps2 = 0b0010_0000,
+    /// Interrupt on three bytes
+    Ps3 = 0b0100_0000,
+}
+
+pub const PREAMBLE_DETECTOR_TOL: u8 = 0x0A;
 
 bitflags! {
     /// Interrupt flags register 1
