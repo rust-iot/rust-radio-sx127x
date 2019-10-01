@@ -18,6 +18,7 @@ extern crate serde;
 
 use core::convert::TryFrom;
 use core::marker::PhantomData;
+use core::fmt::Debug;
 
 extern crate embedded_hal as hal;
 use hal::blocking::delay;
@@ -234,10 +235,11 @@ where
         &mut self,
         state: State,
     ) -> Result<(), Error<CommsError, PinError>> {
-        trace!("Set state to: {:?}", state);
+        trace!("Set state to: {:?} (0x{:02x})", state, state as u8);
         self.set_state(state)?;
         loop {
             let s = self.get_state()?;
+            trace!("Received: {:?}", s);
             if state == s {
                 break;
             }
@@ -269,8 +271,8 @@ where
                 self.set_state(State::Sleep)?;
                 self.update_reg(
                     regs::Common::OPMODE,
-                    device::OPMODE_LONGRANGEMODE_MASK,
-                    device::LongRangeMode::Off as u8,
+                    device::OPMODE_LONGRANGEMODE_MASK | device::OPMODE_MODULATION_MASK,
+                    device::LongRangeMode::Off as u8 | device::ModulationType::Fsk as u8,
                 )?;
             }
             ModemMode::LoRa => {
@@ -296,6 +298,8 @@ where
             (channel >> 0) as u8,
         ];
 
+        debug!("Set channel to index: {:?} (freq: {:?})", channel, freq);
+
         self.hal.write_regs(regs::Common::FRFMSB as u8, &outgoing)?;
 
         Ok(())
@@ -317,6 +321,8 @@ where
     /// Calibrate the device RF chain
     /// This MUST be called directly after resetting the module
     pub(crate) fn rf_chain_calibration(&mut self) -> Result<(), Error<CommsError, PinError>> {
+        debug!("Running calibration");
+
         // Load initial PA config
         let frequency = self.get_frequency()?;
         let pa_config = self.read_reg(regs::Common::PACONFIG)?;
@@ -332,6 +338,7 @@ where
         )?;
 
         // Block on calibration complete
+        // TODO: make this fallible with a timeout?
         while self.read_reg(regs::Fsk::IMAGECAL)? & (regs::RF_IMAGECAL_IMAGECAL_RUNNING as u8) != 0
         {
         }
@@ -347,6 +354,7 @@ where
         )?;
 
         // Block on calibration complete
+        // TODO: make this fallible with a timeout?
         while self.read_reg(regs::Fsk::IMAGECAL)? & (regs::RF_IMAGECAL_IMAGECAL_RUNNING as u8) != 0
         {
         }
@@ -354,6 +362,8 @@ where
         // Restore PA config and channel
         self.set_frequency(frequency)?;
         self.write_reg(regs::Common::PACONFIG, pa_config)?;
+
+        debug!("Calibration done");
 
         Ok(())
     }
@@ -368,10 +378,6 @@ where
             hal,
             config,
             mode: Mode::Unconfigured,
-            #[cfg(feature = "ffi")]
-            c: None,
-            #[cfg(feature = "ffi")]
-            err: None,
             _ce: PhantomData,
             _pe: PhantomData,
         }
@@ -394,16 +400,22 @@ where
     /// Read a u8 value from the specified register
     pub fn read_reg<R>(&mut self, reg: R) -> Result<u8, Error<CommsError, PinError>>
     where
-        R: Copy + Clone + Into<u8>,
+        R: Copy + Clone + Debug + Into<u8>,
     {
-        self.hal.read_reg(reg.into())
+        let value = self.hal.read_reg(reg.into())?;
+
+        trace!("Read reg:   {:?} (0x{:02x}): 0x{:02x}", reg, reg.into(), value);
+
+        Ok(value)
     }
 
     /// Write a u8 value to the specified register
     pub fn write_reg<R>(&mut self, reg: R, value: u8) -> Result<(), Error<CommsError, PinError>>
     where
-        R: Copy + Clone + Into<u8>,
+        R: Copy + Clone + Debug + Into<u8>,
     {
+        trace!("Write reg:  {:?} (0x{:02x}): 0x{:02x}", reg, reg.into(), value);
+
         self.hal.write_reg(reg.into(), value)
     }
 
@@ -415,8 +427,10 @@ where
         value: u8,
     ) -> Result<u8, Error<CommsError, PinError>>
     where
-        R: Copy + Clone + Into<u8>,
+        R: Copy + Clone + Debug + Into<u8>,
     {
+        trace!("Update reg: {:?} (0x{:02x}): 0x{:02x} (0x{:02x})", reg, reg.into(), value, mask);
+
         self.hal.update_reg(reg.into(), mask, value)
     }
 }

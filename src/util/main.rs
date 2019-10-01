@@ -7,7 +7,7 @@
 #[macro_use]
 extern crate log;
 extern crate simplelog;
-use simplelog::TermLogger;
+use simplelog::{TermLogger, TerminalMode, LevelFilter};
 
 extern crate structopt;
 use structopt::StructOpt;
@@ -34,7 +34,11 @@ fn main() {
     let opts = Options::from_args();
 
     // Setup logging
-    TermLogger::init(opts.level, simplelog::Config::default()).unwrap();
+    let mut log_config = simplelog::ConfigBuilder::new();
+    log_config.add_filter_ignore("embedded_spi".to_string());
+    log_config.set_location_level(LevelFilter::Off);
+
+    TermLogger::init(opts.level, log_config.build(), TerminalMode::Mixed).unwrap();
 
     debug!("Connecting to SPI device");
 
@@ -63,8 +67,36 @@ fn main() {
     busy.set_direction(Direction::Out)
         .expect("error setting busy pin direction");
 
+    // Generate configuration
+    debug!("Generating configuration");
+    let mut config = Config::default();
+    match &opts.command {
+        Command::LoRa(lora_config) => {
+            let modem = LoRaConfig::default();
+            let mut channel = LoRaChannel::default();
+
+            if let Some(f) = lora_config.freq_mhz {
+                channel.freq = f * 1_000_000;
+            }
+
+            config.modem = Modem::LoRa(modem);
+            config.channel = Channel::LoRa(channel);
+        }
+        Command::Gfsk(gfsk_config) => {
+            let modem = FskConfig::default();
+            let mut channel = FskChannel::default();
+
+            if let Some(f) = gfsk_config.freq_mhz {
+                channel.freq = f * 1_000_000;
+            }
+
+            config.modem = Modem::FskOok(modem);
+            config.channel = Channel::FskOok(channel);
+        },
+        _ => (),
+    }
+
     debug!("Creating radio instance");
-    let config = Config::default();
     let mut radio =
         Sx127x::spi(spi, cs, busy, rst, Delay {}, &config).expect("error creating device");
 
@@ -78,31 +110,9 @@ fn main() {
             return;
         }
         Command::LoRa(lora_config) => {
-            let modem = LoRaConfig::default();
-            let mut channel = LoRaChannel::default();
-
-            if let Some(f) = lora_config.freq_mhz {
-                channel.freq = f * 1_000_000;
-            }
-
-            radio
-                .lora_configure(&modem, &channel)
-                .expect("error configuring lora mode");
-
             do_command(radio, lora_config.operation).expect("error executing command");
         }
         Command::Gfsk(gfsk_config) => {
-            let modem = FskConfig::default();
-            let mut channel = FskChannel::default();
-
-            if let Some(f) = gfsk_config.freq_mhz {
-                channel.freq = f * 1_000_000;
-            }
-
-            radio
-                .fsk_configure(&modem, &channel)
-                .expect("error configuring gfsk mode");
-
             do_command(radio, gfsk_config.operation).expect("error executing command");
         }
     }
