@@ -276,9 +276,10 @@ where
     ///  and returns the number of bytes received on success
     pub(crate) fn fsk_get_received(
         &mut self,
-        _info: &mut PacketInfo,
+        info: &mut PacketInfo,
         data: &mut [u8],
     ) -> Result<usize, Error<CommsError, PinError>> {
+
         let mut len = [0u8; 1];
         // Read the length byte from the FIFO
         self.hal.read_buff(&mut len)?;
@@ -290,6 +291,12 @@ where
 
         // Read the rest of the fifo data
         self.hal.read_buff(&mut data[..len])?;
+
+        // Read the RSSI
+        let raw_rssi = self.read_reg(regs::Fsk::RSSIVALUE)? as i8;
+        info.rssi = (raw_rssi / 2) as i16;
+
+        debug!("Received data: {:?} info: {:?}", &data[0..len], &info);
 
         Ok(len)
     }
