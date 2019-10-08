@@ -293,8 +293,7 @@ where
         self.hal.read_buff(&mut data[..len])?;
 
         // Read the RSSI
-        let raw_rssi = self.read_reg(regs::Fsk::RSSIVALUE)? as i8;
-        info.rssi = (raw_rssi / 2) as i16;
+        info.rssi = self.fsk_poll_rssi()?;
 
         debug!("Received data: {:?} info: {:?}", &data[0..len], &info);
 
@@ -304,9 +303,9 @@ where
     /// Poll for the current channel RSSI
     /// This should only be called in receive mode
     pub(crate) fn fsk_poll_rssi(&mut self) -> Result<i16, Error<CommsError, PinError>> {
-        let raw = self.read_reg(regs::Fsk::RSSIVALUE)? as i8;
+        let raw_rssi = self.read_reg(regs::Fsk::RSSIVALUE)?;
 
-        let rssi = (raw / 2) as i16;
+        let rssi = -((raw_rssi / 2) as i16);
 
         Ok(rssi)
     }
