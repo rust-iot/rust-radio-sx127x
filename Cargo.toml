@@ -1,7 +1,7 @@
 [package]
 name = "radio-sx127x"
 description = "Rust driver for the Semtec SX127x Sub GHZ LoRa Radio ICs"
-version = "0.8.2"
+version = "0.9.0"
 authors = ["Ryan Kurte <ryankurte@gmail.com>"]
 repository = "https://github.com/ryankurte/rust-radio-sx127x"
 license = "MPL-2.0"
