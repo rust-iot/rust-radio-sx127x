@@ -178,6 +178,26 @@ where
         Ok(sx127x)
     }
 
+    /// Reset the device. This recalibrates and patches the device,
+    /// however, still requires configuration.
+    pub fn reset(&mut self) -> Result<(), Error<CommsError, PinError>> {
+        self.hal.reset()?;
+
+        // Calibrate RX chain
+        sx127x.rf_chain_calibration()?;
+
+        // Set state to sleep
+        sx127x.set_state(State::Sleep)?;
+
+        // Load initial configuration values
+        for (modem, reg, val) in device::REGISTERS_INIT {
+            sx127x.set_modem(*modem)?;
+            sx127x.write_reg(*reg, *val)?;
+        }
+
+        Ok(())
+    }
+
     /// (re)apply device configuration
     pub fn configure(&mut self, config: &Config) -> Result<(), Error<CommsError, PinError>> {
         // Configure the modem as appropriate

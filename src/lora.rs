@@ -16,7 +16,7 @@ where
     Base: Sx127xBase<CommsError, PinError>,
 {
     /// Configure the radio in lora mode with the provided configuration and channel
-    pub fn lora_configure(
+    pub(crate) fn lora_configure(
         &mut self,
         config: &LoRaConfig,
         channel: &LoRaChannel,

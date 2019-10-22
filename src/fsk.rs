@@ -25,7 +25,7 @@ impl<Base, CommsError, PinError> Sx127x<Base, CommsError, PinError>
 where
     Base: Sx127xBase<CommsError, PinError>,
 {
-    pub fn fsk_configure(
+    pub(crate) fn fsk_configure(
         &mut self,
         config: &FskConfig,
         channel: &FskChannel,
