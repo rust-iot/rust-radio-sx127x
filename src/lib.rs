@@ -184,15 +184,15 @@ where
         self.hal.reset()?;
 
         // Calibrate RX chain
-        sx127x.rf_chain_calibration()?;
+        self.rf_chain_calibration()?;
 
         // Set state to sleep
-        sx127x.set_state(State::Sleep)?;
+        self.set_state(State::Sleep)?;
 
         // Load initial configuration values
         for (modem, reg, val) in device::REGISTERS_INIT {
-            sx127x.set_modem(*modem)?;
-            sx127x.write_reg(*reg, *val)?;
+            self.set_modem(*modem)?;
+            self.write_reg(*reg, *val)?;
         }
 
         Ok(())
