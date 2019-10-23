@@ -13,7 +13,8 @@ extern crate libc;
 extern crate bitflags;
 #[macro_use]
 extern crate log;
-#[macro_use]
+
+#[cfg(feature = "serde")]
 extern crate serde;
 
 use core::convert::TryFrom;
@@ -255,15 +256,29 @@ where
         &mut self,
         state: State,
     ) -> Result<(), Error<CommsError, PinError>> {
+        // Send set state command
         trace!("Set state to: {:?} (0x{:02x})", state, state as u8);
         self.set_state(state)?;
+
+        let mut ticks = 0;
         loop {
+            // Fetch current state
             let s = self.get_state()?;
             trace!("Received: {:?}", s);
+
+            // Check for expected state
             if state == s {
                 break;
             }
+            // Timeout eventually
+            if ticks >= self.config.timeout_ms {
+                warn!("Set state timeout");
+                return Err(Error::Timeout)
+            }
+            
+
             self.hal.delay_ms(1);
+            ticks += 1;
         }
         Ok(())
     }

@@ -19,7 +19,8 @@ use self::fsk::{FskChannel, FskConfig};
 pub const OPMODE_STATE_MASK: u8 = 0b0000_0111;
 
 /// Sx127x radio configuration
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub struct Config {
     /// Device modem configuration
     pub modem: Modem,
@@ -32,6 +33,9 @@ pub struct Config {
 
     /// Device crystal frequency (defaults to 32MHz)
     pub xtal_freq: u32,
+
+    /// Timeout for internally blocking radio operations
+    pub timeout_ms: u32,
 }
 
 impl Default for Config {
@@ -41,12 +45,14 @@ impl Default for Config {
             channel: Channel::LoRa(LoRaChannel::default()),
             pa_config: PaConfig::default(),
             xtal_freq: 32000000,
+            timeout_ms: 100,
         }
     }
 }
 
 /// LoRa Received packet information
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub struct PacketInfo {
     /// Received Signal Strength Indication
     pub rssi: i16,
@@ -61,7 +67,8 @@ impl Default for PacketInfo {
 }
 
 /// Radio modem configuration contains fields for each modem mode
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum Modem {
     /// Modem not configured
     None,
@@ -72,7 +79,8 @@ pub enum Modem {
 }
 
 /// Radio channel configuration contains channel options for each mode
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum Channel {
     /// Channel not configured
     None,
@@ -105,7 +113,8 @@ pub enum State {
 }
 
 /// Sx127x Power Amplifier (PA) configuration
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub struct PaConfig {
     /// Power amplifier output selection (defaults to PA_BOOST output)
     pub output: PaSelect,
@@ -268,7 +277,8 @@ pub const PASELECT_RFO: u8 = 0b0000_0000;
 pub const PASELECT_PA_BOOST: u8 = 0b1000_0000;
 
 /// Select the power amplifier output configuration
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum PaSelect {
     /// RFO pin, output power limited to +14dBm
     /// with specified maximum output value, defaults to 0x04 for 14dBm output

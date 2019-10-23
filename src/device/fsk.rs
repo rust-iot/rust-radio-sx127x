@@ -5,8 +5,9 @@
 pub use super::common::*;
 
 /// FSK and OOK mode configuration
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-#[serde(default)]
+#[derive(Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
+#[cfg_attr(feature = "serde", serde(default))]
 pub struct FskConfig {
     /// Preamble length in symbols (defaults to 0x8)
     pub preamble_len: u16,
@@ -89,8 +90,9 @@ impl Default for FskConfig {
 }
 
 /// Fsk radio channel configuration
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
-#[serde(default)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
+#[cfg_attr(feature = "serde", serde(default))]
 pub struct FskChannel {
     /// (G)FSK frequency in Hz (defaults to 434 MHz)
     pub freq: u32,
@@ -121,7 +123,8 @@ impl Default for FskChannel {
 }
 
 // FSK bandwidth register values
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum Bandwidth {
     Bw2600 = 0x17,
     Bw3100 = 0x0F,
@@ -150,7 +153,8 @@ pub const OPMODE_LRMODE_MASK: u8 = 0x80;
 
 pub const OPMODE_SHAPING_MASK: u8 = 0b0001_1000;
 
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum Shaping {
     Sh00 = 0x00,
     Sh01 = 0x08,
@@ -161,7 +165,8 @@ pub enum Shaping {
 pub const OPMODE_MODULATION_MASK: u8 = 0b0010_0000;
 
 /// Modulation modes for the standard modem
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum Modulation {
     /// Frequency Shift Keying
     Fsk = 0x00,
@@ -175,7 +180,8 @@ pub const PACKETFORMAT_FIXED: u8 = 0x80;
 
 pub const DCFREE_MASK: u8 = 0x60;
 
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum DcFree {
     Off = 0x00,
     Manchester = 0x20,
@@ -184,7 +190,8 @@ pub enum DcFree {
 
 pub const CRC_MASK: u8 = 0x10;
 
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum Crc {
     Off = 0x00,
     On = 0x10,
@@ -192,7 +199,8 @@ pub enum Crc {
 
 pub const CRC_AUTOCLEAR_MASK: u8 = 0x08;
 
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum CrcAutoClear {
     Off = 0x08,
     On = 0x00,
@@ -200,7 +208,8 @@ pub enum CrcAutoClear {
 
 pub const ADDRESS_FILTER_MASK: u8 = 0x08;
 
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum AddressFilter {
     Off = 0x00,
     Node = 0x02,
@@ -209,7 +218,8 @@ pub enum AddressFilter {
 
 pub const CRC_WHITENING_MASK: u8 = 0x01;
 
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum CrcWhitening {
     Ccitt = 0x00,
     Ibm = 0x01,
@@ -217,7 +227,8 @@ pub enum CrcWhitening {
 
 pub const WMBUS_CRC_MASK: u8 = 0x80;
 
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum WmbusCrc {
     Off = 0x00,
     On = 0x80,
@@ -225,7 +236,8 @@ pub enum WmbusCrc {
 
 pub const DATAMODE_MASK: u8 = 0x40;
 
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum DataMode {
     Continuous = 0x00,
     Packet = 0x40,
@@ -233,7 +245,8 @@ pub enum DataMode {
 
 pub const IOHOME_MASK: u8 = 0x20;
 
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum IoHome {
     Off = 0x00,
     On = 0x20,
@@ -241,7 +254,8 @@ pub enum IoHome {
 
 pub const BEACON_MASK: u8 = 0x08;
 
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum Beacon {
     Off = 0x00,
     On = 0x08,
@@ -267,21 +281,24 @@ pub const RXCONFIG_AGCAUTO_MASK: u8 = 0xF7;
 pub const RXCONFIG_RXTRIGER_MASK: u8 = 0xF8;
 
 /// Receive mode Auto Frequency Calibration (AFC)
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum RxAfc {
     On = 0x10,
     Off = 0x00,
 }
 
 /// Receive mode Auto Gain Compensation (AGC)
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum RxAgc {
     On = 0x08,
     Off = 0x00,
 }
 
 /// Receive mode trigger configuration
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum RxTrigger {
     Off = 0x00,
     Rssi = 0x01,
@@ -290,13 +307,15 @@ pub enum RxTrigger {
 }
 
 /// Control preamble detector state
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum PreambleDetect {
     On = 0x80,
     Off = 0x00,
 }
 
-#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
 pub enum PreambleDetectSize {
     /// Interrupt on one byte
     Ps1 = 0b0000_0000,
