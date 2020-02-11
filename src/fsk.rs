@@ -144,9 +144,21 @@ where
         // Set frequency
         self.set_frequency(channel.freq)?;
 
+        // Need our own rounding alogrithm because corelib doesn't have
+        // f32::round
+        let round = |x: f32| -> u32 {
+            let integer = x as u32;
+                if (x - (integer as f32)) < 0.5 {
+                   integer
+                }
+                else {
+                   integer + 1
+                }
+        };
+
         // Calculate channel configuration
-        let fdev = ((channel.fdev as f32) / device::FREQ_STEP).round() as u32;
-        let datarate = (self.config.xtal_freq as f32 / channel.br as f32).round() as u32;
+        let fdev = round((channel.fdev as f32) / device::FREQ_STEP);
+        let datarate = round(self.config.xtal_freq as f32 / channel.br as f32);
         trace!("fdev: {} bitrate: {}", fdev, datarate);
 
         // Set frequency deviation
