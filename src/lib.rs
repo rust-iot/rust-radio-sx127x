@@ -22,9 +22,9 @@ use core::marker::PhantomData;
 use core::fmt::Debug;
 
 extern crate embedded_hal as hal;
-use hal::blocking::delay;
+use hal::blocking::delay::DelayMs;
 use hal::blocking::spi::{Transfer, Write};
-use hal::digital::v2::{InputPin, OutputPin};
+use hal::digital::v2::OutputPin;
 use hal::spi::{Mode as SpiMode, Phase, Polarity};
 
 extern crate embedded_spi;
@@ -118,27 +118,26 @@ impl Default for Settings {
     }
 }
 
-impl<Spi, CommsError, Output, Input, PinError, Delay>
-    Sx127x<SpiWrapper<Spi, CommsError, Output, Input, PinError, Delay>, CommsError, PinError>
+impl<Spi, SpiError, CsPin, BusyPin, ReadyPin, ResetPin, PinError, Delay>
+    Sx127x<SpiWrapper<Spi, SpiError, CsPin, BusyPin, ReadyPin, ResetPin, PinError, Delay>, SpiError, PinError>
 where
-    Spi: Transfer<u8, Error = CommsError> + Write<u8, Error = CommsError>,
-    Output: OutputPin<Error = PinError>,
-    Input: InputPin<Error = PinError>,
-    Delay: delay::DelayMs<u32>,
+    Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
+    CsPin: OutputPin<Error = PinError>,
+    Delay: DelayMs<u32>,
 {
     /// Create an Sx127x with the provided SPI implementation and pins
     pub fn spi(
         spi: Spi,
-        cs: Output,
-        busy: Input,
-        sdn: Output,
+        cs: CsPin,
+        busy: BusyPin,
+        ready: ReadyPin,
+        reset: ResetPin,
         delay: Delay,
         config: &Config,
-    ) -> Result<Self, Error<CommsError, PinError>> {
-        // Create SpiWrapper over spi/cs/busy
-        let mut hal = SpiWrapper::new(spi, cs, delay);
-        hal.with_busy(busy);
-        hal.with_reset(sdn);
+    ) -> Result<Self, Error<SpiError, PinError>> {
+        // Create SpiWrapper over spi/cs/busy/ready/reset
+        let mut hal = SpiWrapper::new(spi, cs, busy, ready, reset, delay);
+
         // Create instance with new hal
         Self::new(hal, config)
     }
@@ -419,7 +418,7 @@ where
     }
 }
 
-impl<Base, CommsError, PinError> delay::DelayMs<u32> for Sx127x<Base, CommsError, PinError>
+impl<Base, CommsError, PinError> DelayMs<u32> for Sx127x<Base, CommsError, PinError>
 where
     Base: base::Base<CommsError, PinError>,
 {
