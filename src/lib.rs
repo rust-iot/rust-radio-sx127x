@@ -24,7 +24,7 @@ use core::fmt::Debug;
 extern crate embedded_hal as hal;
 use hal::blocking::delay::DelayMs;
 use hal::blocking::spi::{Transfer, Write};
-use hal::digital::v2::OutputPin;
+use hal::digital::v2::{InputPin, OutputPin};
 use hal::spi::{Mode as SpiMode, Phase, Polarity};
 
 extern crate embedded_spi;
@@ -123,6 +123,8 @@ impl<Spi, SpiError, CsPin, BusyPin, ReadyPin, ResetPin, PinError, Delay>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
+    BusyPin: InputPin<Error = PinError>,
+    ResetPin: OutputPin<Error = PinError>,
     Delay: DelayMs<u32>,
 {
     /// Create an Sx127x with the provided SPI implementation and pins
@@ -136,7 +138,7 @@ where
         config: &Config,
     ) -> Result<Self, Error<SpiError, PinError>> {
         // Create SpiWrapper over spi/cs/busy/ready/reset
-        let mut hal = SpiWrapper::new(spi, cs, busy, ready, reset, delay);
+        let hal = SpiWrapper::new(spi, cs, busy, ready, reset, delay);
 
         // Create instance with new hal
         Self::new(hal, config)
