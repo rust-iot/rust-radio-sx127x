@@ -124,6 +124,7 @@ where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
     BusyPin: InputPin<Error = PinError>,
+    ReadyPin: InputPin<Error = PinError>,
     ResetPin: OutputPin<Error = PinError>,
     Delay: DelayMs<u32>,
 {
