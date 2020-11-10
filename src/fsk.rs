@@ -4,7 +4,12 @@
 //!
 //! Copyright 2019 Ryan Kurte
 
+
+use core::fmt::Debug;
+
 use radio::State as _;
+
+use log::{trace, debug};
 
 use crate::{Error, Mode, Sx127x};
 
@@ -16,20 +21,23 @@ use crate::device::{self, regs, Channel, Modem, ModemMode, PacketInfo, State};
 /// Marker struct for FSK/OOK operating mode
 pub struct FskOokMode();
 
-impl<Base, CommsError, PinError> Sx127x<Base, CommsError, PinError> where
-    Base: Sx127xBase<CommsError, PinError>
+impl<Base, CommsError, PinError, DelayError> Sx127x<Base, CommsError, PinError, DelayError> where
+    Base: Sx127xBase<CommsError, PinError, DelayError>
 {
 }
 
-impl<Base, CommsError, PinError> Sx127x<Base, CommsError, PinError>
+impl<Base, CommsError, PinError, DelayError> Sx127x<Base, CommsError, PinError, DelayError>
 where
-    Base: Sx127xBase<CommsError, PinError>,
+    Base: Sx127xBase<CommsError, PinError, DelayError>,
+    CommsError: Debug + Sync + Send + 'static,
+    PinError: Debug + Sync + Send + 'static,
+    DelayError: Debug + Sync + Send + 'static,
 {
     pub(crate) fn fsk_configure(
         &mut self,
         config: &FskConfig,
         channel: &FskChannel,
-    ) -> Result<(), Error<CommsError, PinError>> {
+    ) -> Result<(), Error<CommsError, PinError, DelayError>> {
         debug!("Configuring FSK/OOK mode: {:?} {:?}", config, channel);
 
         // Switch to sleep to change modem mode
@@ -116,7 +124,7 @@ where
     pub(crate) fn fsk_get_interrupts(
         &mut self,
         clear: bool,
-    ) -> Result<(Irq1, Irq2), Error<CommsError, PinError>> {
+    ) -> Result<(Irq1, Irq2), Error<CommsError, PinError, DelayError>> {
         let reg = self.read_reg(regs::Fsk::IRQFLAGS1)?;
         let irq1 = Irq1::from_bits(reg).unwrap();
 
@@ -140,7 +148,7 @@ where
     pub(crate) fn fsk_set_channel(
         &mut self,
         channel: &FskChannel,
-    ) -> Result<(), Error<CommsError, PinError>> {
+    ) -> Result<(), Error<CommsError, PinError, DelayError>> {
         // Set frequency
         self.set_frequency(channel.freq)?;
 
@@ -180,7 +188,7 @@ where
     pub(crate) fn fsk_start_transmit(
         &mut self,
         data: &[u8],
-    ) -> Result<(), Error<CommsError, PinError>> {
+    ) -> Result<(), Error<CommsError, PinError, DelayError>> {
         debug!("Starting send (data: {:?})", data);
 
         // TODO: support large packet sending
@@ -204,7 +212,7 @@ where
     }
 
     /// Check for packet send completion
-    pub(crate) fn fsk_check_transmit(&mut self) -> Result<bool, Error<CommsError, PinError>> {
+    pub(crate) fn fsk_check_transmit(&mut self) -> Result<bool, Error<CommsError, PinError, DelayError>> {
         // Fetch interrupts
         let (i1, i2) = self.fsk_get_interrupts(true)?;
 
@@ -218,7 +226,7 @@ where
         Ok(false)
     }
 
-    pub(crate) fn fsk_start_receive(&mut self) -> Result<(), Error<CommsError, PinError>> {
+    pub(crate) fn fsk_start_receive(&mut self) -> Result<(), Error<CommsError, PinError, DelayError>> {
         debug!("Starting receive");
 
         // Revert to standby state
@@ -251,7 +259,7 @@ where
     pub(crate) fn fsk_check_receive(
         &mut self,
         restart: bool,
-    ) -> Result<bool, Error<CommsError, PinError>> {
+    ) -> Result<bool, Error<CommsError, PinError, DelayError>> {
         // Fetch interrupts
         let (i1, i2) = self.fsk_get_interrupts(true)?;
         let s = self.get_state()?;
@@ -290,7 +298,7 @@ where
         &mut self,
         info: &mut PacketInfo,
         data: &mut [u8],
-    ) -> Result<usize, Error<CommsError, PinError>> {
+    ) -> Result<usize, Error<CommsError, PinError, DelayError>> {
 
         let mut len = [0u8; 1];
         // Read the length byte from the FIFO
@@ -314,7 +322,7 @@ where
 
     /// Poll for the current channel RSSI
     /// This should only be called in receive mode
-    pub(crate) fn fsk_poll_rssi(&mut self) -> Result<i16, Error<CommsError, PinError>> {
+    pub(crate) fn fsk_poll_rssi(&mut self) -> Result<i16, Error<CommsError, PinError, DelayError>> {
         let raw_rssi = self.read_reg(regs::Fsk::RSSIVALUE)?;
 
         let rssi = -((raw_rssi / 2) as i16);

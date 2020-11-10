@@ -4,24 +4,16 @@
 //!
 //! Copyright 2019 Ryan Kurte
 
-#[macro_use]
-extern crate log;
-extern crate simplelog;
+use log::{trace, debug, info, error};
 use simplelog::{TermLogger, TerminalMode, LevelFilter};
 
-extern crate structopt;
 use structopt::StructOpt;
 
-extern crate humantime;
 
-extern crate linux_embedded_hal;
-use linux_embedded_hal::sysfs_gpio::Direction;
-use linux_embedded_hal::{spidev, Delay, Pin as PinDev, Spidev};
+use driver_pal::hal::{HalInst, HalDelay};
 
-extern crate radio;
-
-extern crate radio_sx127x;
 use radio_sx127x::prelude::*;
+
 
 mod options;
 use options::*;
@@ -35,37 +27,23 @@ fn main() {
 
     // Setup logging
     let mut log_config = simplelog::ConfigBuilder::new();
-    log_config.add_filter_ignore("embedded_spi".to_string());
+    log_config.add_filter_ignore("driver_pal".to_string());
     log_config.set_location_level(LevelFilter::Off);
 
-    TermLogger::init(opts.level, log_config.build(), TerminalMode::Mixed).unwrap();
+    TermLogger::init(opts.log_level, log_config.build(), TerminalMode::Mixed).unwrap();
 
     debug!("Connecting to SPI device");
 
-    // Connect to hardware
-    let mut spi = Spidev::open(opts.spi).expect("error opening spi device");
-    let mut config = spidev::SpidevOptions::new();
-    config.mode(spidev::SPI_MODE_0 | spidev::SPI_NO_CS);
-    config.max_speed_hz(opts.baud);
-    spi.configure(&config)
-        .expect("error configuring spi device");
-
-    debug!("Configuring I/O pins");
-
-    let cs = PinDev::new(opts.cs);
-    cs.export().expect("error exporting cs pin");
-    cs.set_direction(Direction::Out)
-        .expect("error setting cs pin direction");
-
-    let rst = PinDev::new(opts.rst);
-    rst.export().expect("error exporting rst pin");
-    rst.set_direction(Direction::Out)
-        .expect("error setting rst pin direction");
-
-    let busy = PinDev::new(opts.busy);
-    busy.export().expect("error exporting busy pin");
-    busy.set_direction(Direction::Out)
-        .expect("error setting busy pin direction");
+    // Connect to SPI peripheral
+    debug!("Connecting to platform SPI");
+    trace!("with config: {:?}", opts.spi_config);
+    let HalInst{base: _, spi, pins} = match HalInst::load(&opts.spi_config) {
+        Ok(v) => v,
+        Err(e) => {
+            error!("Error connecting to platform HAL: {:?}", e);
+            return;
+        }
+    };
 
     // Generate configuration
     debug!("Generating configuration");
@@ -98,7 +76,7 @@ fn main() {
 
     debug!("Creating radio instance");
     let mut radio =
-        Sx127x::spi(spi, cs, busy, rst, Delay {}, &config).expect("error creating device");
+        Sx127x::spi(spi, pins.cs, pins.busy, pins.ready, pins.reset, HalDelay {}, &config).expect("error creating device");
 
     debug!("Executing command");
     match opts.command {

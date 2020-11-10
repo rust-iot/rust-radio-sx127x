@@ -4,6 +4,10 @@
 //!
 //! Copyright 2019 Ryan Kurte
 
+use core::fmt::Debug;
+
+use log::{trace, debug, warn, error};
+
 use radio::State as _;
 
 use crate::base::Base as Sx127xBase;
@@ -11,16 +15,19 @@ use crate::device::lora::*;
 use crate::device::{self, regs, Channel, Modem, ModemMode, PacketInfo, State};
 use crate::{Error, Mode, Sx127x};
 
-impl<Base, CommsError, PinError> Sx127x<Base, CommsError, PinError>
+impl<Base, CommsError, PinError, DelayError> Sx127x<Base, CommsError, PinError, DelayError>
 where
-    Base: Sx127xBase<CommsError, PinError>,
+    Base: Sx127xBase<CommsError, PinError, DelayError>,
+    CommsError: Debug + Sync + Send + 'static,
+    PinError: Debug + Sync + Send + 'static,
+    DelayError: Debug + Sync + Send + 'static,
 {
     /// Configure the radio in lora mode with the provided configuration and channel
     pub(crate) fn lora_configure(
         &mut self,
         config: &LoRaConfig,
         channel: &LoRaChannel,
-    ) -> Result<(), Error<CommsError, PinError>> {
+    ) -> Result<(), Error<CommsError, PinError, DelayError>> {
         debug!("Configuring lora mode");
 
         // Update internal config
@@ -114,7 +121,7 @@ where
     pub(crate) fn lora_get_interrupts(
         &mut self,
         clear: bool,
-    ) -> Result<Irq, Error<CommsError, PinError>> {
+    ) -> Result<Irq, Error<CommsError, PinError, DelayError>> {
         let reg = self.read_reg(regs::LoRa::IRQFLAGS)?;
         let irq = Irq::from_bits(reg).unwrap();
 
@@ -129,7 +136,7 @@ where
     pub(crate) fn lora_set_channel(
         &mut self,
         channel: &LoRaChannel,
-    ) -> Result<(), Error<CommsError, PinError>> {
+    ) -> Result<(), Error<CommsError, PinError, DelayError>> {
         use device::lora::{Bandwidth::*, SpreadingFactor::*};
 
         // Set the frequency
@@ -212,7 +219,7 @@ where
     pub(crate) fn lora_start_transmit(
         &mut self,
         data: &[u8],
-    ) -> Result<(), Error<CommsError, PinError>> {
+    ) -> Result<(), Error<CommsError, PinError, DelayError>> {
         debug!("Starting send (data: {:?})", data);
 
         // TODO: support large packet sending
@@ -262,7 +269,7 @@ where
     /// Check for transmission completion
     /// This method should be polled (or checked following and interrupt) to indicate sending
     /// has completed
-    pub(crate) fn lora_check_transmit(&mut self) -> Result<bool, Error<CommsError, PinError>> {
+    pub(crate) fn lora_check_transmit(&mut self) -> Result<bool, Error<CommsError, PinError, DelayError>> {
         let irq = self.lora_get_interrupts(true)?;
         trace!("Poll check send, irq: {:?}", irq);
 
@@ -276,7 +283,7 @@ where
     }
 
     /// Start receive mode
-    pub(crate) fn lora_start_receive(&mut self) -> Result<(), Error<CommsError, PinError>> {
+    pub(crate) fn lora_start_receive(&mut self) -> Result<(), Error<CommsError, PinError, DelayError>> {
         use device::lora::Bandwidth::*;
 
         debug!("Starting receive");
@@ -339,7 +346,7 @@ where
     pub(crate) fn lora_check_receive(
         &mut self,
         restart: bool,
-    ) -> Result<bool, Error<CommsError, PinError>> {
+    ) -> Result<bool, Error<CommsError, PinError, DelayError>> {
         let irq = self.lora_get_interrupts(true)?;
         let mut res = Ok(false);
 
@@ -386,7 +393,7 @@ where
         &mut self,
         info: &mut PacketInfo,
         data: &mut [u8],
-    ) -> Result<usize, Error<CommsError, PinError>> {
+    ) -> Result<usize, Error<CommsError, PinError, DelayError>> {
         // Fetch the number of bytes and current RX address pointer
         let n = self.read_reg(regs::LoRa::RXNBBYTES)? as usize;
         let r = self.read_reg(regs::LoRa::FIFORXCURRENTADDR)?;
@@ -423,7 +430,7 @@ where
 
     /// Poll for the current channel RSSI
     /// This should only be called in receive mode
-    pub(crate) fn lora_poll_rssi(&mut self) -> Result<i16, Error<CommsError, PinError>> {
+    pub(crate) fn lora_poll_rssi(&mut self) -> Result<i16, Error<CommsError, PinError, DelayError>> {
         let raw = self.read_reg(regs::LoRa::RSSIVALUE)?;
 
         // TODO: hf/lf port switch

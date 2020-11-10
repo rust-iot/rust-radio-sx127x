@@ -2,6 +2,8 @@
 //!
 //! Copyright 2019 Ryan Kurte
 
+use bitflags::bitflags;
+
 pub use super::common::*;
 
 /// FSK and OOK mode configuration

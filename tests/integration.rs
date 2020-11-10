@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
 
-extern crate embedded_spi;
-use embedded_spi::utils::{load_config, DeviceConfig};
+extern crate driver_pal;
+use driver_pal::utils::{load_config, DeviceConfig};
 
 extern crate radio_sx127x;
 use radio_sx127x::prelude::*;
