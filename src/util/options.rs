@@ -1,6 +1,7 @@
 use humantime::Duration as HumanDuration;
 use simplelog::LevelFilter;
 use structopt::StructOpt;
+use driver_pal::hal::{DeviceConfig};
 
 #[derive(StructOpt)]
 #[structopt(name = "Sx127x-util")]
@@ -9,30 +10,13 @@ pub struct Options {
     #[structopt(subcommand)]
     /// Subcommand to execute
     pub command: Command,
-
-    /// SPI device for radio connection
-    #[structopt(long = "spi", default_value = "/dev/spidev0.0", env = "SX127X_SPI")]
-    pub spi: String,
-
-    /// Chip Select (output) pin
-    #[structopt(long = "cs-pin", default_value = "16", env = "SX127X_CS")]
-    pub cs: u64,
-
-    /// Reset (output) pin
-    #[structopt(long = "rst-pin", default_value = "17", env = "SX127X_RST")]
-    pub rst: u64,
-
-    /// Busy (input) pin
-    #[structopt(long = "busy-pin", default_value = "5", env = "SX127X_BUSY")]
-    pub busy: u64,
-
-    /// Baud rate setting
-    #[structopt(long = "baud", default_value = "1000000", env = "SX127X_BAUD")]
-    pub baud: u32,
+    
+    #[structopt(flatten)]
+    pub spi_config: DeviceConfig,
 
     /// Log verbosity setting
-    #[structopt(long = "log-level", default_value = "info")]
-    pub level: LevelFilter,
+    #[structopt(long, default_value = "info")]
+    pub log_level: LevelFilter,
 }
 
 #[derive(StructOpt, PartialEq, Debug)]

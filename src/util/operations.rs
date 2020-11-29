@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use log::{debug, info};
+
 use super::options::*;
 
 pub fn do_command<T, I, E>(radio: T, operation: Operation) -> Result<(), E>
