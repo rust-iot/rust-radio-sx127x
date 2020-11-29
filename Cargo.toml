@@ -34,7 +34,7 @@ version = "0.8.0-alpha.0"
 default-features = false
 
 [dev-dependencies]
-color-backtrace = "0.4"
+color-backtrace = "0.5"
 
 
 [[bin]]
