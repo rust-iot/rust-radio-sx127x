@@ -11,7 +11,40 @@ edition = "2018"
 util = [ "structopt", "driver-pal/hal", "simplelog", "humantime" ] 
 default = [ "util", "serde" ]
 
+# features for examples
+examples = []
+
+stm32f0xx = []
+stm32f1xx = []
+stm32f3xx = []
+stm32f4xx = []
+stm32f7xx = []
+stm32h7xx = []
+stm32l0xx = []
+stm32l1xx = []
+stm32l4xx = []
+
+stm32f042   = ["stm32f0xx-hal/stm32f042",   "stm32f0xx-hal/rt", "examples"]
+stm32f030xc = ["stm32f0xx-hal/stm32f030xc", "stm32f0xx-hal/rt", "examples"]
+stm32f100   = ["stm32f1xx-hal/stm32f100",   "stm32f1xx-hal/rt", "examples"]
+stm32f101   = ["stm32f1xx-hal/stm32f101",   "stm32f1xx-hal/rt", "examples"]
+stm32f103   = ["stm32f1xx-hal/stm32f103",   "stm32f1xx-hal/rt", "examples"]
+stm32f303xc = ["stm32f3xx-hal/stm32f303xc", "stm32f3xx-hal/rt", "examples"]
+stm32f401   = ["stm32f4xx-hal/stm32f401",   "stm32f4xx-hal/rt", "examples"]
+stm32f405   = ["stm32f4xx-hal/stm32f405",   "stm32f4xx-hal/rt", "examples"]
+stm32f411   = ["stm32f4xx-hal/stm32f411",   "stm32f4xx-hal/rt", "examples"]
+stm32f722   = ["stm32f7xx-hal/stm32f722",   "stm32f7xx-hal/rt", "examples"]
+stm32h742   = ["stm32h7xx-hal/stm32h742",   "stm32h7xx-hal/rt", "examples"]
+stm32l0x2   = ["stm32l0xx-hal/stm32l0x2",   "stm32l0xx-hal/rt", "examples", "stm32l0xx-hal/mcu-STM32L072KZTx"]
+stm32l0x1   = ["stm32l0xx-hal/stm32l0x1",   "stm32l0xx-hal/rt", "examples", "stm32l0xx-hal/mcu-STM32L071KBTx"]
+stm32l100   = ["stm32l1xx-hal/stm32l100",   "stm32l1xx-hal/rt", "examples"]
+stm32l151   = ["stm32l1xx-hal/stm32l151",   "stm32l1xx-hal/rt", "examples"]
+stm32l4x1   = ["stm32l4xx-hal/stm32l4x1",   "stm32l4xx-hal/rt", "examples"]
+stm32l4x2   = ["stm32l4xx-hal/stm32l4x2",   "stm32l4xx-hal/rt", "examples"]
+
 [dependencies]
+#embedded-hal-compat = "0.1.3"
+embedded-hal-compat = { git = "https://github.com/ryankurte/embedded-hal-compat.git", branch = "main"}
 libc = "0.2"
 log = { version = "0.4" }
 bitflags = "1.0"
@@ -22,19 +55,41 @@ simplelog = { version = "0.8.0", optional = true }
 humantime = { version = "2.0.0", optional = true }
 linux-embedded-hal = { version = "0.4.0-alpha.0", optional = true }
 driver-cp2130 = { version = "1.0.0-alpha.1", optional = true }
+void = { version = "1.0", default-features = false}  # for return result i stm32f0xx_hal
 
-[dependencies.radio]
-version = "0.7.0"
+radio = { version = "0.8.1" }
 
-[dependencies.embedded-hal]
-version = "1.0.0-alpha.4"
+# Next could be dev-dependencies since they are only for examples, but 
+#  dev-dependencies do not allow optional (as of cargo 1.44.1).
+stm32f0xx-hal = {version = "^0.17.1",optional = true} 
+stm32f1xx-hal = {version = "^0.7.0", optional = true} 
+stm32f3xx-hal = {version = "^0.6.1", optional = true} 
+stm32f4xx-hal = {version = "^0.8.3", optional = true} 
+stm32f7xx-hal = {version = "^0.2.0", optional = true} 
+stm32h7xx-hal = {version = "^0.8.0", optional = true} 
+stm32l0xx-hal = {version = "^0.6.2", optional = true} 
+stm32l1xx-hal = {version = "^0.1.0", optional = true,  default-features = false} 
+stm32l4xx-hal = {version = "^0.6.0", optional = true}
 
-[dependencies.driver-pal]
-version = "0.8.0-alpha.0"
-default-features = false
+embedded-hal = {version = "1.0.0-alpha.4" }
+old-e-h      = {version = "0.2.4", package = "embedded-hal" }
 
-[dev-dependencies]
-color-backtrace = "0.5"
+libusb-sys = {version ="0.2", optional = true}
+
+embedded-spi = {version = "0.6", default-features = false}
+driver-pal = {version = "0.8.0-alpha.0", default-features = false}
+
+#[dev-dependencies.color-backtrace] # this needs std, which causes example build to fail
+#color-backtrace = "0.5"
+
+[dev-dependencies]                     # for examples
+cortex-m = "0.6.7"
+cortex-m-rt = "0.6.13"
+cortex-m-semihosting = "0.3.7"
+panic-halt = "0.2.0"
+panic-semihosting = ">=0.5.2"
+heapless = ">=0.4.3"                   # for example lora_spi_gps
+nb = ">=0.1.2"                         # for example lora_spi_gps
 
 
 [[bin]]
@@ -45,12 +100,32 @@ required-features = ["util"]
 [[test]]
 name = "integration"
 path = "tests/integration.rs"
-required-features = ["utils"]
+required-features = ["default", "util"]
 
 
 [patch.crates-io]
 # Patch for radio-hal to update embedded-hal version
 radio = { git = "https://github.com/ryankurte/rust-radio.git", branch = "master" }
 
+
 # Fix for libusb-sys package discovery
-libusb-sys = { git = "https://github.com/cmsd2/libusb-sys" } 
+#libusb-sys = { git = "https://github.com/cmsd2/libusb-sys" } 
+#libusb-sys = { git = "https://github.com/dcuddeback/libusb-sys" } 
+#https://github.com/dcuddeback/libusb-sys   consider
+#libusb-sys = {version ="0.2", optional = true}
+
+
+[[example]]
+name = "lora_spi_send"
+path = "examples/lora_spi_send.rs"
+required-features = ["examples"]
+
+[[example]]
+name = "lora_spi_receive"
+path = "examples/lora_spi_receive.rs"
+required-features = ["examples"]
+
+[[example]]
+name = "lora_spi_gps"
+path = "examples/lora_spi_gps.rs"
+required-features = ["examples"]

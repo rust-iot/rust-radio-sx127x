@@ -2,7 +2,7 @@ name: Rust
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, testing-e-h_0.2.4, examples-testing ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ master ]
@@ -26,12 +26,15 @@ jobs:
             use_cross: false
             experimental: false
             args: --features util,driver-pal/hal-cp2130,driver-pal/hal-linux
-          - target: armv7-unknown-linux-gnueabihf 
+
+          # probably want next three targets on master, but they are time consuming when testing examples
+          - target: armv7-unknown-linux-gnueabihf
             os: ubuntu-latest
             output: sx127x-util
             use_cross: false
             experimental: true
             args: --features util,driver-pal/hal-cp2130,driver-pal/hal-linux
+          
           - target: x86_64-apple-darwin
             os: macos-latest
             output: sx127x-util
@@ -70,14 +73,16 @@ jobs:
     
     - name: Install libusb (apt native)
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu' }}
-      run: sudo apt install -y libusb-1.0 libusb-dev
+      #run: sudo apt install -y libusb-1.0 libusb-dev
+      run: sudo apt install -y libusb-1.0-0 libusb-1.0-0-dev
 
     - name: Install libusb (apt armv7)
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.target == 'armv7-unknown-linux-gnueabihf' }}
       run: |
         sudo dpkg add-architecture armhf
         sudo apt update
-        sudo apt install libusb-1.0:armhf libusb-dev:armhf
+        #sudo apt install libusb-1.0:armhf libusb-dev:armhf
+        sudo apt-get install libusb-1.0-0:armhf libusb-1.0-0-dev:armhf  # try apt-get in place of apt
 
     - name: Install libusb (vcpkg)
       if: ${{ matrix.os == 'windows-latest' }}
@@ -92,7 +97,8 @@ jobs:
       with:
         key: ${{ matrix.os }}-${{ matrix.target }}
         path: $VCPKG_DIRECTORY
-
+      
+    # probably want next 4 name sections on master, but not on forks and branches
     - name: Build release
       uses: actions-rs/cargo@v1
       with:
@@ -121,6 +127,85 @@ jobs:
         tag: ${{ github.ref }}
         overwrite: true
 
+  test_examples:
+    name: Test examples
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        mcu: [stm32f042, stm32f030xc, stm32f103, stm32f100, stm32f101, stm32f303xc,
+              stm32f401, stm32f411,   stm32h742, stm32l0x2, stm32l100, stm32l151, stm32l4x2, ]
+        include:
+           - mcu:  stm32f042
+             hal: "stm32f0xx"
+             trg: "thumbv6m-none-eabi"
+           - mcu:  stm32f030xc
+             hal: "stm32f0xx"
+             trg: "thumbv6m-none-eabi"   
+           - mcu:  stm32f100
+             hal: "stm32f1xx"
+             trg: "thumbv7m-none-eabi"
+           - mcu:  stm32f101
+             hal: "stm32f1xx"
+             trg: "thumbv7m-none-eabi"
+           - mcu:  stm32f103
+             hal: "stm32f1xx"
+             trg: "thumbv7m-none-eabi"
+           - mcu:  stm32f303xc
+             hal: "stm32f3xx"
+             trg: "thumbv7em-none-eabihf"
+           - mcu:  stm32f401
+             hal: "stm32f4xx"
+             trg: "thumbv7em-none-eabihf"
+           - mcu:  stm32f411
+             hal: "stm32f4xx"
+             trg: "thumbv7em-none-eabihf"
+           - mcu:  stm32h742		 
+             hal: "stm32h7xx"
+             trg: "thumbv7em-none-eabihf"
+           - mcu:  stm32l0x2
+             hal: "stm32l0xx"
+             trg: "thumbv6m-none-eabi"
+           - mcu:  stm32l100
+             hal: "stm32l1xx"
+             trg: "thumbv7m-none-eabi"
+           - mcu:  stm32l151
+             hal: "stm32l1xx"
+             trg: "thumbv7m-none-eabi"
+           - mcu:  stm32l4x2
+             hal: "stm32l4xx"
+             trg: "thumbv7em-none-eabi"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+      #- name: Build
+      #  uses: actions-rs/cargo@v1
+      #  with:
+      #    command: build
+      #    args:  --no-default-features --release --target ${{ matrix.trg }} --features ${{ matrix.mcu }}
+      - name: Build example lora_spi_send
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args:  --no-default-features --release --target ${{ matrix.trg }} --features ${{ matrix.hal }},${{ matrix.mcu }} --example lora_spi_send
+          use-cross: true
+      - name: Build example lora_spi_receive
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args:  --no-default-features --release --target ${{ matrix.trg }} --features ${{ matrix.hal }},${{ matrix.mcu }} --example lora_spi_receive
+          use-cross: true
+      - name: Build example lora_spi_gps
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args:  --no-default-features --release --target ${{ matrix.trg }} --features ${{ matrix.hal }},${{ matrix.mcu }} --example lora_spi_gps
+          use-cross: true
+
+  # probably want release on master, but not on forks and branches
   release:
     name: Create release
     runs-on: ubuntu-latest
