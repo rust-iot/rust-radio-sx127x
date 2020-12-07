@@ -31,6 +31,7 @@ driver-cp2130 = { version = "1.0.0-alpha.1", optional = true }
 version = "0.7.0"
 
 [dependencies.embedded-hal]
+#version = "1.0.0-alpha.1"
 version = "1.0.0-alpha.4"
 
 [dependencies.driver-pal]
@@ -49,7 +50,18 @@ panic-semihosting = "0.5.2"
 cortex-m-semihosting = "0.3.3"
 #embedded-spi  = { version = "0.6", default-features = false }
 stm32f4xx-hal = { git = "https://github.com/stm32-rs/stm32f4xx-hal", branch = "master" }
-#version = "0.6.0"
+#stm32f4xx-hal = "0.8.3"
+
+[patch."https://github.com/stm32-rs/stm32f4xx-hal"]
+stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions" }
+#stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/dd14acca71a5fcfdfd77bf531a30ab33b7dd2c0a"}
+
+[patch.crates-io]
+# Patch for radio-hal to update embedded-hal version
+radio = { git = "https://github.com/ryankurte/rust-radio.git", branch = "master" }
+#stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions" }
+##stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/a1316e83dcb1e92fb52cc1d5d04a5bd066f14575"}
+##stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/dd14acca71a5fcfdfd77bf531a30ab33b7dd2c0a"}
 
 
 [[bin]]
@@ -63,10 +75,6 @@ path = "tests/integration.rs"
 required-features = ["utils"]
 
 
-[patch.crates-io]
-# Patch for radio-hal to update embedded-hal version
-radio = { git = "https://github.com/ryankurte/rust-radio.git", branch = "master" }
-stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions" }
 
 # Fix for libusb-sys package discovery
 libusb-sys = { git = "https://github.com/cmsd2/libusb-sys" } 
