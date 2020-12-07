@@ -66,6 +66,7 @@ required-features = ["utils"]
 [patch.crates-io]
 # Patch for radio-hal to update embedded-hal version
 radio = { git = "https://github.com/ryankurte/rust-radio.git", branch = "master" }
+stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions" }
 
 # Fix for libusb-sys package discovery
 libusb-sys = { git = "https://github.com/cmsd2/libusb-sys" } 
