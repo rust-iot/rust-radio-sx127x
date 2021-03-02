@@ -12,8 +12,10 @@ util = [ "structopt", "driver-pal/hal", "simplelog", "humantime" ]
 default = [ "util", "serde" ]
 
 # for examples
-stm32f4xx = []
-stm32f411 = ["stm32f4xx-hal/stm32f411", "stm32f4xx-hal/rt"] 
+#stm32f4xx = []
+#stm32f411 = ["stm32f4xx-hal/stm32f411", "stm32f4xx-hal/rt"] 
+stm32f1xx = []
+stm32f103 = ["stm32f1xx-hal/stm32f103", "stm32f1xx-hal/rt"]
 
 [dependencies]
 libc = "0.2"
@@ -31,7 +33,6 @@ driver-cp2130 = { version = "1.0.0-alpha.1", optional = true }
 version = "0.7.0"
 
 [dependencies.embedded-hal]
-#version = "1.0.0-alpha.1"
 version = "1.0.0-alpha.4"
 
 [dependencies.driver-pal]
@@ -49,19 +50,27 @@ panic-halt = "0.2.0"
 panic-semihosting = "0.5.2"
 cortex-m-semihosting = "0.3.3"
 #embedded-spi  = { version = "0.6", default-features = false }
-stm32f4xx-hal = { git = "https://github.com/stm32-rs/stm32f4xx-hal", branch = "master" }
-#stm32f4xx-hal = "0.8.3"
 
-[patch."https://github.com/stm32-rs/stm32f4xx-hal"]
-stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions" }
-#stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/dd14acca71a5fcfdfd77bf531a30ab33b7dd2c0a"}
+stm32f1xx-hal = { git = "https://github.com/eldruin/stm32f1xx-hal", rev = "7cb3c53"}   #1.0.0-alpha.4
+#stm32f1xx-hal = { git = "https://github.com/stm32-rs/stm32f1xx-hal", branch = "embedded-hal-1.0.0-alpha.4"  }
+
+#stm32f4xx-hal = "0.8.3"
+#stm32f4xx-hal = { git = "https://github.com/stm32-rs/stm32f4xx-hal", branch = "master" }
+#stm32f1xx-hal = { git = "https://github.com/stm32-rs/stm32f1xx-hal", branch = "master" }
+
+#[patch."https://github.com/stm32-rs/stm32f4xx-hal"]
+#stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions" }
+##stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", 
+##                  rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/dd14acca71a5fcfdfd77bf531a30ab33b7dd2c0a"}
 
 [patch.crates-io]
 # Patch for radio-hal to update embedded-hal version
 radio = { git = "https://github.com/ryankurte/rust-radio.git", branch = "master" }
 #stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions" }
-##stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/a1316e83dcb1e92fb52cc1d5d04a5bd066f14575"}
-##stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/dd14acca71a5fcfdfd77bf531a30ab33b7dd2c0a"}
+##stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", 
+##                  rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/a1316e83dcb1e92fb52cc1d5d04a5bd066f14575"}
+##stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", 
+##                  rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/dd14acca71a5fcfdfd77bf531a30ab33b7dd2c0a"}
 
 
 [[bin]]
@@ -82,9 +91,11 @@ libusb-sys = { git = "https://github.com/cmsd2/libusb-sys" }
 [[example]]
 name = "lora_spi_send"
 path = "examples/lora_spi_send.rs"
-required-features = ["stm32f4xx", "stm32f411"]
+required-features = ["stm32f1xx", "stm32f103"]
+#required-features = ["stm32f4xx", "stm32f411"]
 #optional = true
 
-#  build example with (some default-features require std) 
-# cargo build   --target thumbv7em-none-eabihf --no-default-features  --features="stm32f411, stm32f4xx"  --example lora_spi_send
 
+#  build example  (no-default-features because some default-features require std)
+# cargo build   --target thumbv7em-none-eabihf --no-default-features  --features="stm32f411, stm32f4xx"  --example lora_spi_send
+# cargo build   --target thumbv7m-none-eabi    --no-default-features  --features="stm32f103, stm32f1xx"  --example lora_spi_send

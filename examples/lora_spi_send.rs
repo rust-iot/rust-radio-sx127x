@@ -1,10 +1,8 @@
-//   ********* MOVED  stm32f4xx_hal setup CODE TO MAIN and removed other setups **************
+//   ********* MOVED  stm32f1xx_hal setup CODE TO MAIN and removed other setups **************
 
 // setup() TEMPORARILY DISABLED. 
 
-// ATTEMPT BUILD ONLY WITH  MCU stm32f411 and hal stm32f4xx_hal:
-// cargo build   --target thumbv7em-none-eabihf --no-default-features  --features="stm32f411, stm32f4xx"  --example lora_spi_send
-
+// ATTEMPT BUILD ONLY WITH  MCU stm32f103 and hal stm32f1xx_hal:
 
 //! Transmit a simple message with LoRa using crate radio_sx127x (on SPI).
 
@@ -21,15 +19,24 @@ use cortex_m_rt::entry;
 use cortex_m_semihosting::*;
 
 
+use embedded_hal::{blocking::delay::DelayMs,
+                   spi::{Mode, Phase, Polarity }, //these need to be from same version as
+		                                                //embedded_hal used by stm32*_hal supplying spi
+		   };
+
 use radio_sx127x::{prelude::*,                                    // prelude has Sx127x,
 		   device::{Modem, Channel, PaConfig, PaSelect,},
                    device::lora::{LoRaConfig, LoRaChannel, Bandwidth, SpreadingFactor, CodingRate,
                                   PayloadLength, PayloadCrc, FrequencyHopping, },
 		   };
 
-
 // lora and radio parameters
 
+
+pub const MODE: Mode = Mode {		    //  SPI mode for radio
+    phase: Phase::CaptureOnSecondTransition,
+    polarity: Polarity::IdleHigh,
+    };
 
 const FREQUENCY: u32 = 907_400_000;           // frequency in hertz ch_12: 915_000_000, ch_2: 907_400_000
 
@@ -61,76 +68,60 @@ const CONFIG_RADIO: radio_sx127x::device::Config = radio_sx127x::device::Config 
 	timeout_ms: 100,
 	};
 
-use stm32f4xx_hal::{prelude::*,  
-		    pac::Peripherals, 
-		    spi::{Spi, Mode, Phase, Polarity},
-		    delay::Delay,
-		    time::MegaHertz,
+
+#[cfg(feature = "stm32f1xx")]  //  eg blue pill stm32f103
+use stm32f1xx_hal::{prelude::*,   
+                    pac::Peripherals, 
+                    spi::{Spi,  Error, Spi1NoRemap, }, // wrapper::Wrapper },
+                    delay::Delay,
+                    gpio::{gpioa::{PA5, PA6, PA7, PA0, PA1}, Alternate, Output, PushPull, Input,Floating,
+                           gpiob::{PB8, PB9}},
+		    pac::{SPI1, },
 		    }; 
 
 
-// To define explicit type for the lora object
-//
-//use stm32f4xx_hal::{prelude::*,  
-//		      pac::Peripherals, 
-//		      spi::{Spi, Error, Mode, Phase, Polarity},
-//		      delay::Delay,
-//		      time::MegaHertz,
-//		      gpio::{gpioa::{PA5, PA6, PA7}, Alternate, AF5,  
-//			     gpioa::{PA0, PA1}, Output, PushPull,
-//			   gpiob::{PB8, PB9}, Input, Floating},
-//		      pac::SPI1,
-//		      }; 
-//
-//    use driver_pal::wrapper::Wrapper;
-//
-//    type LoraType = Sx127x<Wrapper<Spi<SPI1, 
-//	      (PA5<Alternate<AF5>>,    PA6<Alternate<AF5>>,   PA7<Alternate<AF5>>)>,  Error, 
-//	      PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-//	      core::convert::Infallible,  Delay,  Delay>,  Error, core::convert::Infallible, Delay>;
-
 #[entry]
 fn main() -> !{
-
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
 
-       let rcc   = p.RCC.constrain();
-       let clocks = rcc.cfgr.sysclk(64.mhz()).pclk1(32.mhz()).freeze();
+       let mut rcc   = p.RCC.constrain();
+       let clocks = rcc.cfgr.sysclk(64.mhz()).pclk1(32.mhz()).freeze(&mut p.FLASH.constrain().acr);
        
-       let gpioa = p.GPIOA.split();
-       let gpiob = p.GPIOB.split();
-
+       let mut afio = p.AFIO.constrain(&mut rcc.apb2);
+       let mut gpioa = p.GPIOA.split(&mut rcc.apb2);
+       let mut gpiob = p.GPIOB.split(&mut rcc.apb2);
+    
        let spi = Spi::spi1(
            p.SPI1,
-           (gpioa.pa5.into_alternate_af5(),  // sck   on PA5
-            gpioa.pa6.into_alternate_af5(),  // miso  on PA6
-            gpioa.pa7.into_alternate_af5()   // mosi  on PA7
+           (gpioa.pa5.into_alternate_push_pull(&mut gpioa.crl),  //   sck   on PA5
+            gpioa.pa6.into_floating_input(&mut gpioa.crl),       //   miso  on PA6
+            gpioa.pa7.into_alternate_push_pull(&mut gpioa.crl)   //   mosi  on PA7
             ),
-           Mode {		      //  SPI mode for radio
-                phase: Phase::CaptureOnSecondTransition,
-                polarity: Polarity::IdleHigh,
-                },
-           MegaHertz(8).into(),
-           clocks,
+               &mut afio.mapr,
+           MODE,
+           8.mhz(),
+           clocks, 
+           &mut rcc.apb2,
            );
-              
+
+     
        let delay = Delay::new(cp.SYST, clocks);
+       //let delay = DelayMs::new(cp.SYST, clocks);
 
        // Create lora radio instance 
-    
-       //let lora: LoraType = Sx127x::spi(
+
        let lora = Sx127x::spi(
-    	    spi,                                                       //Spi
-    	    gpioa.pa1.into_push_pull_output(),                         //CsPin         on PA1
-    	    gpiob.pb8.into_floating_input(),                           //BusyPin  DI00 on PB8
-            gpiob.pb9.into_floating_input(),                           //ReadyPin DI01 on PB9
-    	    gpioa.pa0.into_push_pull_output(),                         //ResetPin      on PA0
-    	    delay,					               //Delay
-    	    &CONFIG_RADIO,					       //&Config
+    	    spi,					             //Spi
+    	    gpioa.pa1.into_push_pull_output(&mut gpioa.crl),         //CsPin         on PA1
+    	    gpiob.pb8.into_floating_input(&mut gpiob.crh),           //BusyPin  DIO0 on PB8
+            gpiob.pb9.into_floating_input(&mut gpiob.crh),           //ReadyPin DIO1 on PB9
+    	    gpioa.pa0.into_push_pull_output(&mut gpioa.crl),         //ResetPin      on PA0
+    	    delay,					             //Delay
+    	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
+      
   
-       
     let message = b"Hello, LoRa!";
         
     hprintln!("entering loop").unwrap();
@@ -145,6 +136,6 @@ fn main() -> !{
            Err(_err) => hprintln!("Error in lora.check_transmit(). Should return True or False.").unwrap(),
            };
        
-       lora.delay_ms(5000u32);
+       lora.try_delay_ms(5000u32);
        };
 }
