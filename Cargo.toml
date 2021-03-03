@@ -25,6 +25,7 @@ stm32l0xx = []
 stm32l1xx = []
 stm32l4xx = []
 
+stm32f042   = ["stm32f0xx-hal/stm32f042",   "stm32f0xx-hal/rt"]
 stm32f030xc = ["stm32f0xx-hal/stm32f030xc", "stm32f0xx-hal/rt"]
 stm32f100   = ["stm32f1xx-hal/stm32f100",   "stm32f1xx-hal/rt"]
 stm32f101   = ["stm32f1xx-hal/stm32f101",   "stm32f1xx-hal/rt"]
