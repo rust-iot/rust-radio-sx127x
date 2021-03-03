@@ -74,14 +74,6 @@ const CONFIG_LORA: LoRaConfig = LoRaConfig {
     invert_iq:      false,
     };
 
-//   compare other settings in python version
-//    lora.set_mode(sx127x_lora::RadioMode::Stdby).unwrap();
-//    set_tx_power(level, output_pin) level >17 => PA_BOOST. 
-//    lora.set_tx_power(17,1).unwrap();  
-//    lora.set_tx_power(15,1).unwrap();  
-
-//baud = 1000000 is this needed for spi or just USART ?
-
 const CONFIG_PA: PaConfig = PaConfig {output: PaSelect::Boost, 
                                        power: 10, };
 
@@ -212,16 +204,6 @@ use stm32f1xx_hal::{prelude::*,
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
       
-       //let mut lora =  match lora {
-            //  Ok(v)   => v,
-            //  Err(error) => {hprintln!("Setup Error: {:?}", error);
-        //                 asm::bkpt();
-        //                 //panic();
-        //                 }
-        //  };
-
-       (tx, rx,  lora)
-       }
 
 
 #[cfg(feature = "stm32f3xx")]  //  eg Discovery-stm32f303
@@ -368,11 +350,6 @@ use stm32f7xx_hal::{prelude::*,
     #[cfg(feature = "stm32f7xx")]
     fn setup() ->  (Tx<USART2>, Rx<USART2>,
                     impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
-
-    //fn setup() ->  (Tx<USART2>, Rx<USART2>,
-    //                sx127x_lora::LoRa<Spi<SPI1, impl Pins<SPI1>, Enabled<u8>>,
-    //                                  PA1<Output<PushPull>>, 
-    //                                  PA0<Output<PushPull>>>) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();

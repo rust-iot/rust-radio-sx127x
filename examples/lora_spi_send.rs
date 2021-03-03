@@ -1,9 +1,51 @@
 //! Transmit a simple message with LoRa using crate radio_sx127x (on SPI).
+//! 
+//!  The largest part of this file is the setup() functions used for each hal.
+//!  These make the application code common.
+//!
+//!  In the following  
+//!      - replace xxx with the example name  lora_spi_send, lora_spi_receive, or lora_spi_gps.
+//!      - set TARGET, HAL, and MCU from a line in the table below (linux syntax).
+//!      - no-default-features is because some default-features require std.
+//!
+//!  The examples can be compiled with:
+//!    cargo build  --no-default-features  --target $TARGET --features=$HAL,$MCU  --example xxx
+//!
+//!  To link, loaded and run using gdb and openocd (with INTERFACE and PROC set as below):
+//!  	openocd -f interface/$INTERFACE.cfg -f target/$PROC.cfg
+//!  and in another window (with TARGET, HAL, and MCU set as below):
+//!  	cargo  run --target $TARGET --features $HAL,$MCU    --example xxx   [ --release ]
+//! 
+//!  If --release is omitted then some MCUs do not have sufficient memory and loading results in
+//!       '.rodata will not fit in region FLASH '
+//!  Even with sufficient memory the code without --release is slower and may result in errors.
+//!
+//!
+//!                cargo run  environment variables                        openocd        test board and processor
+//!    _____________________________________________________________     _____________   ___________________________
+//!    export HAL=stm32f0xx MCU=stm32f042   TARGET=thumbv6m-none-eabi	 PROC=stm32f0x  # none-stm32f042      Cortex-M0
+//!    export HAL=stm32f0xx MCU=stm32f030xc TARGET=thumbv6m-none-eabi	 PROC=stm32f0x  # none-stm32f030      Cortex-M0
+//!    export HAL=stm32f1xx MCU=stm32f103   TARGET=thumbv7m-none-eabi	 PROC=stm32f1x  # bluepill	      Cortex-M3
+//!    export HAL=stm32f1xx MCU=stm32f100   TARGET=thumbv7m-none-eabi	 PROC=stm32f1x  # none-stm32f100      Cortex-M3
+//!    export HAL=stm32f1xx MCU=stm32f101   TARGET=thumbv7m-none-eabi	 PROC=stm32f1x  # none-stm32f101      Cortex-M3
+//!    export HAL=stm32f3xx MCU=stm32f303xc TARGET=thumbv7em-none-eabihf PROC=stm32f3x  # discovery-stm32f303 Cortex-M3
+//!    export HAL=stm32f4xx MCU=stm32f401   TARGET=thumbv7em-none-eabihf PROC=stm32f4x  # blackpill-stm32f401 Cortex-M4
+//!    export HAL=stm32f4xx MCU=stm32f411   TARGET=thumbv7em-none-eabihf PROC=stm32f4x  # blackpill-stm32f411 Cortex-M4
+//!    export HAL=stm32f4xx MCU=stm32f411   TARGET=thumbv7em-none-eabihf PROC=stm32f4x  # nucleo-64	      Cortex-M4
+//!    hal NOT compiling as of (Feb 2021) export HAL=stm32f7xx MCU=stm32f722 TARGET=thumbv7em-none-eabihf #none-stm32f722 Cortex-M7
+//!    export HAL=stm32h7xx MCU=stm32h742   TARGET=thumbv7em-none-eabihf                # none-stm32h742      Cortex-M7
+//!    export HAL=stm32l0xx MCU=stm32l0x2   TARGET=thumbv6m-none-eabi	 PROC=stm32l1   # none-stm32l0x2      Cortex-M0
+//!    export HAL=stm32l1xx MCU=stm32l100   TARGET=thumbv7m-none-eabi	 PROC=stm32l1   # discovery-stm32l100 Cortex-M3
+//!    export HAL=stm32l1xx MCU=stm32l151   TARGET=thumbv7m-none-eabi	 PROC=stm32l1   # heltec-lora-node151 Cortex-M3
+//!    NOT compiling as of (Feb 2021) export HAL=stm32l4xx MCU=stm32l4x2   TARGET=thumbv7em-none-eabi # none-stm32l4x1      Cortex-M4
+//!  
+//!  Depending on the MCU connection to the computer, in the  openocd command use
+//!    export INTERFACE=stlink-v2  
+//!    export INTERFACE=stlink-v2-1  
 
-//!    no-default-features because some default-features require std
-//! cargo build  --no-default-features   --target thumbv7em-none-eabihf --features="stm32f411, stm32f4xx"  --example lora_spi_send
-//! cargo build  --no-default-features   --target thumbv7em-none-eabihf --features="stm32f401, stm32f4xx"  --example lora_spi_receive
-//! cargo build  --no-default-features   --target thumbv7m-none-eabi --features="stm32f103, stm32f1xx"  --example lora_spi_gps
+//! A version of this example is reported at https://pdgilbert.github.io/eg_stm_hal/.
+//! The results reported there use current git versions of the hals, whereas
+//! the example here uses release versions of the hals (as of Feb 2021).
 
 
 //https://www.rfwireless-world.com/Tutorials/LoRa-channels-list.html
@@ -78,14 +120,6 @@ const CONFIG_LORA: LoRaConfig = LoRaConfig {
     invert_iq:      false,
     };
 
-//   compare other settings in python version
-//    lora.set_mode(sx127x_lora::RadioMode::Stdby).unwrap();
-//    set_tx_power(level, output_pin) level >17 => PA_BOOST. 
-//    lora.set_tx_power(17,1).unwrap();  
-//    lora.set_tx_power(15,1).unwrap();  
-
-//baud = 1000000 is this needed for spi or just USART ?
-
 const CONFIG_PA: PaConfig = PaConfig {output: PaSelect::Boost, 
                                        power: 10, };
 
@@ -100,7 +134,7 @@ const CONFIG_RADIO: radio_sx127x::device::Config = radio_sx127x::device::Config 
 	};
 
 
-// setup() does all  hal/MCU specific setup and returns generic hal device for use in main code.
+// setup() does all  hal/MCU specific setup and returns generic object for use in main code.
 
 #[cfg(feature = "stm32f0xx")]  //  eg stm32f030xc
 use stm32f0xx_hal::{prelude::*,   

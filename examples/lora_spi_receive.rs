@@ -77,13 +77,6 @@ const CONFIG_LORA: LoRaConfig = LoRaConfig {
     invert_iq:      false,
     };
 
-//   compare other settings in python version
-//    lora.set_mode(sx127x_lora::RadioMode::Stdby).unwrap();
-//    set_tx_power(level, output_pin) level >17 => PA_BOOST. 
-//    lora.set_tx_power(17,1).unwrap();  
-//    lora.set_tx_power(15,1).unwrap();  
-
-//baud = 1000000 is this needed for spi or just USART ?
 
 const CONFIG_PA: PaConfig = PaConfig {output: PaSelect::Boost, 
                                        power: 10, };
@@ -212,14 +205,6 @@ use stm32f1xx_hal::{prelude::*,
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
       
-       //let mut lora =  match lora {
-            //  Ok(v)   => v,
-            //  Err(error) => {hprintln!("Setup Error: {:?}", error);
-        //                 asm::bkpt();
-        //                 //panic();
-        //                 }
-        //  };
-
        lora
        }
 
@@ -299,46 +284,6 @@ use stm32f4xx_hal::{prelude::*,
                            (PA5<Alternate<AF5>>,    PA6<Alternate<AF5>>,   PA7<Alternate<AF5>>)>,  Error, 
                    PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
                    core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
-
-//    fn setup() ->  impl DelayMs<u32> + Receive<Info= dyn radio::ReceiveInfo, 
-//                                          Error=radio_sx127x::Error<Error, core::convert::Infallible>> { 
-
-// this
-//    fn setup() ->  impl DelayMs<u32> + Receive<Error=radio_sx127x::Error<Error, core::convert::Infallible>> { 
-// gives
-//   Ok(v)  if v  =>  {n = lora.get_received(&mut info, &mut buff).unwrap();
-//                                           ^^^^^^^^^ expected associated type, 
-//					   found struct `radio_sx127x::device::PacketInfo`
-
-// this
-//   fn setup() ->  impl DelayMs<u32> + Receive<Info=radio_sx127x::ReceiveInfo, 
-//                                          Error=radio_sx127x::Error<Error, core::convert::Infallible>> { 
-// gives
-//   cannot find type `ReceiveInfo` in crate `radio_sx127x`
-// It seems that ReceiveInfo is in the git version of radio, but that breaks other things!!
-
-
-// this
-//    fn setup() ->  impl DelayMs<u32> + Receive<Info=radio::Receive::Info, 
-//                                              Error=radio_sx127x::Error<Error, core::convert::Infallible>> { 
-// gives
-//   fn setup() ->  impl DelayMs<u32> + Receive<Info=radio::Receive::Info, 
-//                                                   ^^^^^^^^^^^^^^^^^^^^ help: use fully-qualified syntax: 
-//						     `<Type as radio::Receive>::Info`
-
-// this
-//    fn setup() ->  impl DelayMs<u32> + Receive<Info=radio_sx127x::device::PacketInfo::Info, 
-//                                               Error=radio_sx127x::Error<Error, core::convert::Infallible>> { 
-// gives
-//                 use fully-qualified syntax: `<radio_sx127x::device::PacketInfo as Trait>::Info`
-
-
-// this
-//    fn setup() ->  impl DelayMs<u32> + Receive<Info=<radio_sx127x::device::PacketInfo as radio::Receive>::Info, 
-//                                               Error=radio_sx127x::Error<Error, core::convert::Infallible>> { 
-// gives
-//    the trait `radio::Receive` is not implemented for `radio_sx127x::device::PacketInfo`
-
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
