@@ -2,7 +2,7 @@ name: Rust
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, testing-e-h_0.2.4 ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ master ]
