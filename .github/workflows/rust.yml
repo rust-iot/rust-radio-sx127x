@@ -151,24 +151,24 @@ jobs:
       #  uses: actions-rs/cargo@v1
       #  with:
       #    command: build
-      #    args:  --no-default-features --features ${{ matrix.mcu }}
+      #    args:  --no-default-features --release --features ${{ matrix.mcu }}
       - name: Build example lora_spi_send
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args:  --no-default-features --target ${{ matrix.trg }} --features ${{ matrix.hal }},${{ matrix.mcu }} --example lora_spi_send
+          args:  --no-default-features --release --target ${{ matrix.trg }} --features ${{ matrix.hal }},${{ matrix.mcu }} --example lora_spi_send
           use-cross: true
       - name: Build example lora_spi_receive
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args:  --no-default-features --target ${{ matrix.trg }} --features ${{ matrix.hal }},${{ matrix.mcu }} --example lora_spi_receive
+          args:  --no-default-features --release --target ${{ matrix.trg }} --features ${{ matrix.hal }},${{ matrix.mcu }} --example lora_spi_receive
           use-cross: true
       - name: Build example lora_spi_gps
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args:  --no-default-features --target ${{ matrix.trg }} --features ${{ matrix.hal }},${{ matrix.mcu }} --example lora_spi_gps
+          args:  --no-default-features --release --target ${{ matrix.trg }} --features ${{ matrix.hal }},${{ matrix.mcu }} --example lora_spi_gps
           use-cross: true
 
 #

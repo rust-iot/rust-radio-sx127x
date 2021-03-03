@@ -204,6 +204,8 @@ use stm32f1xx_hal::{prelude::*,
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
       
+       (tx, rx,  lora)
+       }
 
 
 #[cfg(feature = "stm32f3xx")]  //  eg Discovery-stm32f303
