@@ -14,7 +14,7 @@
 //!  To link, loaded and run using gdb and openocd (with INTERFACE and PROC set as below):
 //!  	openocd -f interface/$INTERFACE.cfg -f target/$PROC.cfg
 //!  and in another window (with TARGET, HAL, and MCU set as below):
-//!  	cargo  run --target $TARGET --features $HAL,$MCU    --example xxx   [ --release ]
+//!  	cargo  run  --no-default-features  --target $TARGET --features $HAL,$MCU    --example xxx   [ --release ]
 //! 
 //!  If --release is omitted then some MCUs do not have sufficient memory and loading results in
 //!       '.rodata will not fit in region FLASH '

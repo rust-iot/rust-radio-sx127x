@@ -1,3 +1,32 @@
 
 [target.armv7-unknown-linux-gnueabihf]
 linker = "arm-linux-gnueabihf-gcc"
+
+[target.thumbv7m-none-eabi]
+#runner = 'arm-none-eabi-gdb'
+runner = "gdb-multiarch -q -x openocd.gdb"
+rustflags = [
+  "-C", "link-arg=-Tlink.x",
+]
+
+[target.thumbv7em-none-eabi]
+#runner = 'arm-none-eabi-gdb'
+runner = "gdb-multiarch -q -x openocd.gdb"
+rustflags = [
+  "-C", "link-arg=-Tlink.x",
+]
+
+[target.thumbv7em-none-eabihf]
+#runner = 'arm-none-eabi-gdb'
+runner = "gdb-multiarch -q -x openocd.gdb"
+rustflags = [
+  "-C", "link-arg=-Tlink.x",
+]
+
+[target.riscv32imac-unknown-none-elf]
+#runner = 'riscv64-unknown-elf-gdb -x openocd.gdb'
+runner = "gdb-multiarch -q -x openocd.gdb"
+rustflags = [
+  #"-C", "link-arg=-memory-CB.x",
+  "-C", "link-arg=-Tlink.x",
+]
