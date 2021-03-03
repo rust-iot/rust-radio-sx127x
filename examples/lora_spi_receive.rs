@@ -1,9 +1,8 @@
-//! Transmit a simple message with LoRa using crate radio_sx127x (on SPI).
+//! Receive message with LoRa using crate radio_sx127x (on SPI).
+//! See example lora_spi_send for more details.
 
-//!    no-default-features because some default-features require std
-//! cargo build  --no-default-features   --target thumbv7em-none-eabihf --features="stm32f411, stm32f4xx"  --example lora_spi_send
-//! cargo build  --no-default-features   --target thumbv7em-none-eabihf --features="stm32f401, stm32f4xx"  --example lora_spi_receive
-//! cargo build  --no-default-features   --target thumbv7m-none-eabi --features="stm32f103, stm32f1xx"  --example lora_spi_gps
+//   Using  sck, miso, mosi, cs, reset and D00, D01. Not yet using  D02, D03
+//   See setup() sections below for pins.
 
 
 //https://www.rfwireless-world.com/Tutorials/LoRa-channels-list.html
@@ -18,8 +17,6 @@
 //   'CH_16_868': 867   , 'CH_17_868': 868   ,   
 
 // See FREQUENCY below to set the channel.
-
-
 
 #![no_std]
 #![no_main]
@@ -42,16 +39,18 @@ use embedded_hal::{blocking::delay::DelayMs,
 
 //use cortex_m::asm;  //for breakpoint
 
-use radio_sx127x::Error as sx127xError;                           // Error name conflict with hals
-use radio_sx127x::{prelude::*,                                    // prelude has Sx127x,
+extern crate radio_sx127x;
+use radio_sx127x::{prelude::*,                                     // prelude has Sx127x,
 		   device::{Modem, Channel, PaConfig, PaSelect,},
                    device::lora::{LoRaConfig, LoRaChannel, Bandwidth, SpreadingFactor, CodingRate,
                                   PayloadLength, PayloadCrc, FrequencyHopping, },
 		   };
 
-//use radio::{Receive, Transmit}; 
-use radio::{Transmit}; // trait needs to be in scope to find  methods start_transmit and check_transmit.
-
+// trait needs to be in scope to find  methods start_transmit and check_transmit.
+//use radio::{Receive, Transmit, Radio}; 
+//use radio::{Receive, ReceiveInfo}; 
+use radio::{Receive, }; 
+use embedded_spi::wrapper::Wrapper;
 
 // lora and radio parameters
 
@@ -60,7 +59,7 @@ pub const MODE: Mode = Mode {		    //  SPI mode for radio
     polarity: Polarity::IdleHigh,
     };
 
-const FREQUENCY: u32 = 907_400_000;     // frequency in hertz ch_12: 915_000_000, ch_2: 907_400_000
+const FREQUENCY: u32 = 907_400_000;  // frequency in hertz ch_12: 915_000_000, ch_2: 907_400_000
 
 const CONFIG_CH: LoRaChannel = LoRaChannel {
 	    freq: FREQUENCY as u32,	       // frequency in hertz
@@ -105,12 +104,20 @@ const CONFIG_RADIO: radio_sx127x::device::Config = radio_sx127x::device::Config 
 #[cfg(feature = "stm32f0xx")]  //  eg stm32f030xc
 use stm32f0xx_hal::{prelude::*,   
                     pac::Peripherals, 
-                    spi::{Spi, Error, },
+                    spi::{Spi, EightBit, Error},
                     delay::Delay,
+                    gpio::{gpioa::{PA5, PA6, PA7}, Alternate, Input, AF0,
+                           gpioa::{PA0, PA1}, Output, PushPull,
+                           gpiob::{PB8, PB9}, Floating },
+                    pac::SPI1,
                     }; 
 
+
     #[cfg(feature = "stm32f0xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
+    fn setup() ->   Sx127x<Wrapper<Spi<SPI1, 
+                        PA5<Alternate<AF0>>,  PA6<Alternate<AF0>>, PA7<Alternate<AF0>>,  EightBit>, Error, 
+                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
+                   core::convert::Infallible,  Delay>, Error, core::convert::Infallible> {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let mut p  = Peripherals::take().unwrap();
@@ -150,17 +157,22 @@ use stm32f0xx_hal::{prelude::*,
 #[cfg(feature = "stm32f1xx")]  //  eg blue pill stm32f103
 use stm32f1xx_hal::{prelude::*,   
                     pac::Peripherals, 
-                    spi::{Spi,  Error,},
+                    spi::{Spi, Spi1NoRemap, Error,},
                     delay::Delay,
+                    gpio::{gpioa::{PA5, PA6, PA7}, Alternate, Input, Floating,  
+                           gpioa::{PA0, PA1}, Output, PushPull,
+			   gpiob::{PB8, PB9},  },
+                    device::SPI1,
                     }; 
 
     #[cfg(feature = "stm32f1xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
+    fn setup() ->  Sx127x<Wrapper<Spi<SPI1, Spi1NoRemap,
+                        (PA5<Alternate<PushPull>>,  PA6<Input<Floating>>, PA7<Alternate<PushPull>>), u8>, Error, 
+                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
+                   core::convert::Infallible,  Delay>, Error, core::convert::Infallible> {
 
-    //fn setup() ->  Sx127x<Wrapper<Spi<SPI1, Spi1NoRemap,
-    //                    (PA5<Alternate<PushPull>>,  PA6<Input<Floating>>, PA7<Alternate<PushPull>>), u8>, Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               core::convert::Infallible,  Delay>, Error, core::convert::Infallible> {
+    //fn setup() ->  impl Transmit {
+
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -217,16 +229,20 @@ use stm32f3xx_hal::{prelude::*,
                     stm32::Peripherals,
                     spi::{Spi, Error},
                     delay::Delay,
+                    gpio::{gpioa::{PA5, PA6, PA7}, AF5,  
+                           gpioa::{PA0, PA1}, Output, PushPull,
+			   gpiob::{PB8, PB9}, Input, Floating},
+                    stm32::SPI1,
                     };
 
     #[cfg(feature = "stm32f3xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
-
-    //fn setup() ->  Sx127x<Wrapper<Spi<SPI1, 
-    //                       (PA5<AF5>,    PA6<AF5>,   PA7<AF5>)>,  Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
-          
+    fn setup() ->  Sx127x<Wrapper<Spi<SPI1, 
+                           (PA5<AF5>,    PA6<AF5>,   PA7<AF5>)>,  Error, 
+                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
+                   core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
+    
+    //fn setup() ->  impl Transmit {
+      
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
 
@@ -268,35 +284,61 @@ use stm32f3xx_hal::{prelude::*,
 
 #[cfg(feature = "stm32f4xx")] // eg Nucleo-64 stm32f411, blackpill stm32f411, blackpill stm32f401
 use stm32f4xx_hal::{prelude::*,  
-                    stm32::Peripherals, 
+                    stm32::{Peripherals, SPI1},
                     spi::{Spi, Error},
                     delay::Delay,
-                    //  next would be needed to define exact type 
-		    //gpio::{gpioa::{PA5, PA6, PA7}, Alternate, AF5,  
-                    //       gpioa::{PA0, PA1}, Output, PushPull,
-		    //       gpiob::{PB8, PB9}, Input, Floating},
+                    gpio::{gpioa::{PA5, PA6, PA7}, Alternate, AF5,  
+                           gpioa::{PA0, PA1}, Output, PushPull,
+			   gpiob::{PB8, PB9}, Input, Floating},
                     time::MegaHertz,
-                    //pac::SPI1,
                     }; 
 
-// If the type for the lora object is needed somewhere other than just in the setup() return type then it
-// may be better to explicitly define it as follows. This also require commented lines in use above.
-//
-//    use embedded_spi::wrapper::Wrapper;
-//
-//    type LoraType = Sx127x<Wrapper<Spi<SPI1, 
-//                           (PA5<Alternate<AF5>>,    PA6<Alternate<AF5>>,   PA7<Alternate<AF5>>)>,  Error, 
-//                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-//                   core::convert::Infallible,  Delay>,  Error, core::convert::Infallible>;
-// then
-//    fn setup() ->  LoraType {
-
-//If access to delay in the returned object is not needed ( eg. lora.delay_ms(5000u32); ) then 
-//    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
-// works.
 
     #[cfg(feature = "stm32f4xx")]
-    fn setup() ->  impl  DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
+    fn setup() ->  Sx127x<Wrapper<Spi<SPI1, 
+                           (PA5<Alternate<AF5>>,    PA6<Alternate<AF5>>,   PA7<Alternate<AF5>>)>,  Error, 
+                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
+                   core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
+
+//    fn setup() ->  impl DelayMs<u32> + Receive<Info= dyn radio::ReceiveInfo, 
+//                                          Error=radio_sx127x::Error<Error, core::convert::Infallible>> { 
+
+// this
+//    fn setup() ->  impl DelayMs<u32> + Receive<Error=radio_sx127x::Error<Error, core::convert::Infallible>> { 
+// gives
+//   Ok(v)  if v  =>  {n = lora.get_received(&mut info, &mut buff).unwrap();
+//                                           ^^^^^^^^^ expected associated type, 
+//					   found struct `radio_sx127x::device::PacketInfo`
+
+// this
+//   fn setup() ->  impl DelayMs<u32> + Receive<Info=radio_sx127x::ReceiveInfo, 
+//                                          Error=radio_sx127x::Error<Error, core::convert::Infallible>> { 
+// gives
+//   cannot find type `ReceiveInfo` in crate `radio_sx127x`
+// It seems that ReceiveInfo is in the git version of radio, but that breaks other things!!
+
+
+// this
+//    fn setup() ->  impl DelayMs<u32> + Receive<Info=radio::Receive::Info, 
+//                                              Error=radio_sx127x::Error<Error, core::convert::Infallible>> { 
+// gives
+//   fn setup() ->  impl DelayMs<u32> + Receive<Info=radio::Receive::Info, 
+//                                                   ^^^^^^^^^^^^^^^^^^^^ help: use fully-qualified syntax: 
+//						     `<Type as radio::Receive>::Info`
+
+// this
+//    fn setup() ->  impl DelayMs<u32> + Receive<Info=radio_sx127x::device::PacketInfo::Info, 
+//                                               Error=radio_sx127x::Error<Error, core::convert::Infallible>> { 
+// gives
+//                 use fully-qualified syntax: `<radio_sx127x::device::PacketInfo as Trait>::Info`
+
+
+// this
+//    fn setup() ->  impl DelayMs<u32> + Receive<Info=<radio_sx127x::device::PacketInfo as radio::Receive>::Info, 
+//                                               Error=radio_sx127x::Error<Error, core::convert::Infallible>> { 
+// gives
+//    the trait `radio::Receive` is not implemented for `radio_sx127x::device::PacketInfo`
+
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -349,16 +391,17 @@ use stm32f4xx_hal::{prelude::*,
 #[cfg(feature = "stm32f7xx")] 
 use stm32f7xx_hal::{prelude::*,  
                     pac::Peripherals, 
-                    spi::{Spi, ClockDivider, Error,},
+                    spi::{Spi, Pins, Enabled, ClockDivider, Error,},
                     delay::Delay,
+                    gpio::{gpioa::{PA0, PA1}, Output, PushPull,
+			   gpiob::{PB8, PB9}, Input, Floating},
+                    pac::SPI1,
                     }; 
 
     #[cfg(feature = "stm32f7xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
-    
-    //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>, Enabled<u8>>,  Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
+    fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>, Enabled<u8>>,  Error, 
+                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
+                   core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
 
 
        let cp = cortex_m::Peripherals::take().unwrap();
@@ -404,12 +447,19 @@ use stm32f7xx_hal::{prelude::*,
 #[cfg(feature = "stm32h7xx")] 
 use stm32h7xx_hal::{prelude::*,  
                     pac::Peripherals, 
-                    spi::{ Error},
+                    spi::{Spi, Enabled, Error},
                     delay::Delay,
-                   }; 
+                    gpio::{   //gpioa::{PA5, PA6, PA7}, Alternate, AF5,  really!
+                           gpioa::{PA0, PA1}, Output, PushPull,
+                           gpiob::{PB8, PB9}, Input, Floating},
+                    pac::SPI1,
+                    }; 
 
     #[cfg(feature = "stm32h7xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, stm32h7xx_hal::Never>> {
+    fn setup() -> Sx127x<Wrapper<Spi<SPI1, Enabled>, Error, 
+                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
+                   stm32h7xx_hal::Never,  Delay>,  Error, stm32h7xx_hal::Never> {
+    //fn setup() ->  impl Receive<Error=radio_sx127x::Error<Error, stm32h7xx_hal::Never>> {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p      = Peripherals::take().unwrap();
@@ -456,15 +506,17 @@ use stm32h7xx_hal::{prelude::*,
 use stm32l0xx_hal::{prelude::*,  
                     pac::Peripherals, 
                     rcc,   // for ::Config but note name conflict with serial
-                    spi::{Error, },
+                    spi::{Spi, Pins, Error, },
+                    delay::Delay,
+                    gpio::{gpioa::{PA0, PA1}, Output, PushPull,
+			   gpiob::{PB8, PB9}, Input, Floating},
+                    pac::SPI1,
                     }; 
 
     #[cfg(feature = "stm32l0xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, void::Void>> {
-
-    //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               void::Void,  Delay>,  Error, void::Void> {
+    fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
+                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
+                   void::Void,  Delay>,  Error, void::Void> {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();
@@ -506,15 +558,18 @@ use stm32l0xx_hal::{prelude::*,
 use stm32l1xx_hal::{prelude::*, 
                     stm32::Peripherals, 
                     rcc,   // for ::Config but note name conflict with serial
-                    spi::{Error,},
+                    spi::{Spi, Pins, Error,},
+                    delay::Delay,
+                    gpio::{//gpioa::{PA5, PA6, PA7}, Input,  Floating,   
+                           gpioa::{PA3, PA4}, Output, PushPull,
+			   gpiob::{PB11, PB10}, Input, Floating},
+                    stm32::SPI1,
                     };
 
     #[cfg(feature = "stm32l1xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
-    
-    //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
-    //               PA4<Output<PushPull>>,  PB11<Input<Floating>>,  PB10<Input<Floating>>,  PA3<Output<PushPull>>, 
-    //               core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
+    fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
+                   PA4<Output<PushPull>>,  PB11<Input<Floating>>,  PB10<Input<Floating>>,  PA3<Output<PushPull>>, 
+                   core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
 
        // instead of impl Pins<SPI1>  above could use 
        // Spi<SPI1, (PA5<Input<Floating>>,  PA6<Input<Floating>>, PA7<Input<Floating>>)>
@@ -543,7 +598,6 @@ use stm32l1xx_hal::{prelude::*,
        
        // Create lora radio instance 
 
-//  Heltec lora_node STM32L151CCU6
        let lora = Sx127x::spi(
     	    spi,				                     //Spi
     	    gpioa.pa4.into_push_pull_output(),                       //CsPin         on PA4  in board on Heltec
@@ -564,11 +618,19 @@ use stm32l4xx_hal::{prelude::*,
                     pac::Peripherals, 
                     spi::{Spi, Error,},
                     delay::Delay,
+                    gpio::{gpioa::{PA5, PA6, PA7}, Alternate, AF5, Input, Floating, 
+                           gpioa::{PA0, PA1}, Output, PushPull,
+			   gpiob::{PB8, PB9},},
+                    pac::SPI1,
                     }; 
 
     #[cfg(feature = "stm32l4xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
-    
+    fn setup() -> Sx127x<Wrapper<Spi<SPI1, (PA5<Alternate<AF5, Input<Floating>>>, 
+		                            PA6<Alternate<AF5, Input<Floating>>>, 
+					    PA7<Alternate<AF5, Input<Floating>>> )>, Error, 
+                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
+                   core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
+
        let cp        = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();
        let mut flash = p.FLASH.constrain();
@@ -616,48 +678,32 @@ use stm32l4xx_hal::{prelude::*,
 #[entry]
 fn main() -> !{
 
-    let mut lora =  setup();  //delay is available in lora
+    let mut lora =  setup();         //delay is available in lora.delay_ms()
+    
+    lora.start_receive().unwrap();   // should handle error
 
-    
-    // print out configuration (for debugging)
-    
-//    let v = lora.lora_get_config();
-//    hprintln!("configuration {}", v).unwrap();
-    
-//    hprintln!("chammel	  {}", lora.get_chammel()).unwrap();
+    let mut buff = [0u8; 1024];
+    let mut n: usize ;
+    let mut info = PacketInfo::default();
 
-    //hprintln!("mode		  {}", lora.get_mode()).unwrap();
-    //hprintln!("mode		  {}", lora.read_register(Register::RegOpMode.addr())).unwrap();
-    //hprintln!("bandwidth	  {:?}", lora.get_signal_bandwidth()).unwrap();
-    //hprintln!("coding_rate	  {:?}",  lora.get_coding_rate_4()).unwrap();
-    //hprintln!("spreading_factor {:?}",  lora.get_spreading_factor()).unwrap();
-    //hprintln!("spreading_factor {:?}",  
-    //hprintln!("invert_iq	  {:?}",  lora.get_invert_iq()).unwrap();
-    //hprintln!("tx_power	  {:?}",  lora.get_tx_power()).unwrap();
-    
-    
-    
-    // transmit something
-      
-    //let buffer = &[0xaa, 0xbb, 0xcc];
-    
-    let message = b"Hello, LoRa!";
-    
-    //let mut buffer = [0;100];      //Nov 2020 limit data.len() < 255 in radio_sx127x  .start_transmit
-    //for (i,c) in message.chars().enumerate() {
-    //	buffer[i] = c as u8;
-    //	}    
-    
     loop {
-       lora.start_transmit(message).unwrap();    // should handle error
-       
-       match lora.check_transmit() {
-           Ok(b) => if b {hprintln!("TX complete").unwrap()} 
-                    else {hprintln!("TX not complete").unwrap()},
-           
-           Err(_err) => hprintln!("Error in lora.check_transmit(). Should return True or False.").unwrap(),
-           };
-       
-       lora.delay_ms(5000u32); //omit pending fix
+
+       let poll = lora.check_receive(false);    
+       // false (the restart option) specifies whether transient timeout or CRC errors should be
+       // internally handled (returning Ok(false) or passed back to the caller as errors.
+
+       match poll {
+            Ok(v)  if v  =>  {n = lora.get_received(&mut info, &mut buff).unwrap();
+                              hprintln!("RX complete ({:?}, length: {})", info, n).unwrap();
+                              hprintln!("{:?}", &buff[..n]).unwrap();
+                              },
+
+            Ok(_v)       =>  hprint!(".").unwrap(),           // print . if nothing received
+            
+	    Err(err)     =>  hprintln!("poll error {:?} ", err).unwrap(),
+            };
+
+       lora.delay_ms(100u32);
        };
+
 }

@@ -1,10 +1,5 @@
-//! Transmit a simple message with LoRa using crate radio_sx127x (on SPI).
-
-//!    no-default-features because some default-features require std
-//! cargo build  --no-default-features   --target thumbv7em-none-eabihf --features="stm32f411, stm32f4xx"  --example lora_spi_send
-//! cargo build  --no-default-features   --target thumbv7em-none-eabihf --features="stm32f401, stm32f4xx"  --example lora_spi_receive
-//! cargo build  --no-default-features   --target thumbv7m-none-eabi --features="stm32f103, stm32f1xx"  --example lora_spi_gps
-
+//! Serial interface read GPS on usart and transmit with LoRa using crate radio_sx127x (on SPI).
+//! See example lora_spi_send for more details.
 
 //https://www.rfwireless-world.com/Tutorials/LoRa-channels-list.html
 // channels are as follows
@@ -20,7 +15,6 @@
 // See FREQUENCY below to set the channel.
 
 
-
 #![no_std]
 #![no_main]
 
@@ -29,10 +23,13 @@ extern crate panic_semihosting;
 
 #[cfg(not(debug_assertions))]
 extern crate panic_halt;
+//extern crate panic_reset;
 
-// use nb::block;
+use nb::block;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::*;
+
+use heapless::{consts, Vec};
 
 use embedded_hal::{blocking::delay::DelayMs,
                    spi::{Mode, Phase, Polarity},
@@ -52,7 +49,6 @@ use radio_sx127x::{prelude::*,                                    // prelude has
 //use radio::{Receive, Transmit}; 
 use radio::{Transmit}; // trait needs to be in scope to find  methods start_transmit and check_transmit.
 
-
 // lora and radio parameters
 
 pub const MODE: Mode = Mode {		    //  SPI mode for radio
@@ -60,7 +56,7 @@ pub const MODE: Mode = Mode {		    //  SPI mode for radio
     polarity: Polarity::IdleHigh,
     };
 
-const FREQUENCY: u32 = 907_400_000;     // frequency in hertz ch_12: 915_000_000, ch_2: 907_400_000
+const FREQUENCY: u32 = 907_400_000;   // frequency in hertz ch_12_900: 915_000_000, ch_2_900: 907_400_000
 
 const CONFIG_CH: LoRaChannel = LoRaChannel {
 	    freq: FREQUENCY as u32,	       // frequency in hertz
@@ -105,12 +101,15 @@ const CONFIG_RADIO: radio_sx127x::device::Config = radio_sx127x::device::Config 
 #[cfg(feature = "stm32f0xx")]  //  eg stm32f030xc
 use stm32f0xx_hal::{prelude::*,   
                     pac::Peripherals, 
-                    spi::{Spi, Error, },
+                    serial::{Serial, Tx, Rx},
+		    pac::{USART3},  
+                    spi::{Spi, Error},
                     delay::Delay,
                     }; 
 
     #[cfg(feature = "stm32f0xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
+    fn setup() ->  (Tx<USART3>, Rx<USART3>,
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let mut p  = Peripherals::take().unwrap();
@@ -119,8 +118,11 @@ use stm32f0xx_hal::{prelude::*,
        let gpioa = p.GPIOA.split(&mut rcc);
        let gpiob = p.GPIOB.split(&mut rcc);
        
-       let (sck, miso, mosi, _rst, pa1, pb8, pb9, pa0) = cortex_m::interrupt::free(move |cs| {
-            (   gpioa.pa5.into_alternate_af0(cs),         //   sck   on PA5
+       let (tx, rx, sck, miso, mosi, _rst, pa1, pb8, pb9, pa0) = cortex_m::interrupt::free(move |cs| {
+            (   
+                gpiob.pb10.into_alternate_af4(cs),        //tx pb10  for GPS
+                gpiob.pb11.into_alternate_af4(cs),        //rx pb11  for GPS
+                gpioa.pa5.into_alternate_af0(cs),         //   sck   on PA5
                 gpioa.pa6.into_alternate_af0(cs),	  //   miso  on PA6
                 gpioa.pa7.into_alternate_af0(cs),	  //   mosi  on PA7
                 
@@ -130,10 +132,11 @@ use stm32f0xx_hal::{prelude::*,
 	        gpioa.pa1.into_push_pull_output(cs),      //   CsPin	     on PA1
     	        gpiob.pb8.into_floating_input(cs),        //   BusyPin  DIO0 on PB8
                 gpiob.pb9.into_floating_input(cs),        //   ReadyPin DIO1 on PB9
-    	        gpioa.pa0.into_push_pull_output(cs),      //   ResetPin	     on PA0
+    	        gpioa.pa0.into_push_pull_output(cs),      //   ResetPin	      on PA0
             )
         });
 
+       let (tx, rx) = Serial::usart3(p.USART3, (tx, rx),  9600.bps(), &mut rcc, ).split();
    
        let spi = Spi::spi1(p.SPI1, (sck, miso, mosi), MODE, 8.mhz(), &mut rcc);
      
@@ -143,24 +146,23 @@ use stm32f0xx_hal::{prelude::*,
 
        let lora = Sx127x::spi( spi, pa1, pb8, pb9, pa0, delay, &CONFIG_RADIO, ).unwrap(); // should handle error
 
-       lora
+
+       (tx, rx,  lora)
        }
 
 
 #[cfg(feature = "stm32f1xx")]  //  eg blue pill stm32f103
 use stm32f1xx_hal::{prelude::*,   
                     pac::Peripherals, 
-                    spi::{Spi,  Error,},
+                    serial::{Config, Serial, Tx, Rx},  //, StopBits
+		    device::{USART2},  
+                    spi::{Spi, Error,},
                     delay::Delay,
                     }; 
 
     #[cfg(feature = "stm32f1xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
-
-    //fn setup() ->  Sx127x<Wrapper<Spi<SPI1, Spi1NoRemap,
-    //                    (PA5<Alternate<PushPull>>,  PA6<Input<Floating>>, PA7<Alternate<PushPull>>), u8>, Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               core::convert::Infallible,  Delay>, Error, core::convert::Infallible> {
+    fn setup() ->  (Tx<USART2>, Rx<USART2>,
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -172,6 +174,16 @@ use stm32f1xx_hal::{prelude::*,
        let mut gpioa = p.GPIOA.split(&mut rcc.apb2);
        let mut gpiob = p.GPIOB.split(&mut rcc.apb2);
     
+       let (tx, rx) = Serial::usart2(
+            p.USART2,
+            (gpioa.pa2.into_alternate_push_pull(&mut gpioa.crl),    //tx pa2  for GPS rx
+             gpioa.pa3), 					    //rx pa3  for GPS tx
+            &mut afio.mapr,
+            Config::default() .baudrate(9_600.bps()), 
+            clocks,
+            &mut rcc.apb1,
+            ).split();
+
        let spi = Spi::spi1(
            p.SPI1,
            (gpioa.pa5.into_alternate_push_pull(&mut gpioa.crl),  //   sck   on PA5
@@ -208,25 +220,23 @@ use stm32f1xx_hal::{prelude::*,
         //                 }
         //  };
 
-       lora
+       (tx, rx,  lora)
        }
 
 
 #[cfg(feature = "stm32f3xx")]  //  eg Discovery-stm32f303
 use stm32f3xx_hal::{prelude::*, 
                     stm32::Peripherals,
+                    serial::{ Serial, Tx, Rx},
+		    stm32::{USART2}, 
                     spi::{Spi, Error},
                     delay::Delay,
                     };
 
     #[cfg(feature = "stm32f3xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
-
-    //fn setup() ->  Sx127x<Wrapper<Spi<SPI1, 
-    //                       (PA5<AF5>,    PA6<AF5>,   PA7<AF5>)>,  Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
-          
+    fn setup() ->  (Tx<USART2>, Rx<USART2>,
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
+      
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
 
@@ -235,6 +245,16 @@ use stm32f3xx_hal::{prelude::*,
        
        let mut gpioa = p.GPIOA.split(&mut rcc.ahb);
        let mut gpiob = p.GPIOB.split(&mut rcc.ahb);
+
+       let (tx, rx) = Serial::usart2(
+            p.USART2,
+            (gpioa.pa2.into_af7(&mut gpioa.moder, &mut gpioa.afrl),    //tx pa2  for GPS rx
+             gpioa.pa3.into_af7(&mut gpioa.moder, &mut gpioa.afrl)),   //rx pa3  for GPS tx
+            9600.bps(),    // 115_200.bps(),
+            clocks,
+            &mut rcc.apb1,
+            ).split();
+
 
        let spi = Spi::spi1(
            p.SPI1,
@@ -255,48 +275,30 @@ use stm32f3xx_hal::{prelude::*,
        let lora = Sx127x::spi(
     	    spi,					             //Spi
     	    gpioa.pa1.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper),   //CsPin	    on PA1
-    	    gpiob.pb8.into_floating_input(&mut gpiob.moder,   &mut gpiob.pupdr),    //BusyPin  DIO0 on PB8
-            gpiob.pb9.into_floating_input(&mut gpiob.moder,   &mut gpiob.pupdr),    //ReadyPin DIO1 on PB9
+    	    gpiob.pb8.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr),    //BusyPin  DIO0 on PB8
+            gpiob.pb9.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr),    //ReadyPin DIO1 on PB9
     	    gpioa.pa0.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper),   //ResetPin      on PA0
     	    delay,					                            //Delay
     	    &CONFIG_RADIO,					                    //&Config
     	    ).unwrap();      // should handle error
 
-       lora
+       (tx, rx,  lora)
        }
 
 
 #[cfg(feature = "stm32f4xx")] // eg Nucleo-64 stm32f411, blackpill stm32f411, blackpill stm32f401
 use stm32f4xx_hal::{prelude::*,  
                     stm32::Peripherals, 
+                    serial::{config::Config, Serial, Tx, Rx},
+		    pac::{USART2}, 
                     spi::{Spi, Error},
                     delay::Delay,
-                    //  next would be needed to define exact type 
-		    //gpio::{gpioa::{PA5, PA6, PA7}, Alternate, AF5,  
-                    //       gpioa::{PA0, PA1}, Output, PushPull,
-		    //       gpiob::{PB8, PB9}, Input, Floating},
                     time::MegaHertz,
-                    //pac::SPI1,
                     }; 
 
-// If the type for the lora object is needed somewhere other than just in the setup() return type then it
-// may be better to explicitly define it as follows. This also require commented lines in use above.
-//
-//    use embedded_spi::wrapper::Wrapper;
-//
-//    type LoraType = Sx127x<Wrapper<Spi<SPI1, 
-//                           (PA5<Alternate<AF5>>,    PA6<Alternate<AF5>>,   PA7<Alternate<AF5>>)>,  Error, 
-//                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-//                   core::convert::Infallible,  Delay>,  Error, core::convert::Infallible>;
-// then
-//    fn setup() ->  LoraType {
-
-//If access to delay in the returned object is not needed ( eg. lora.delay_ms(5000u32); ) then 
-//    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
-// works.
-
     #[cfg(feature = "stm32f4xx")]
-    fn setup() ->  impl  DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
+    fn setup() ->  (Tx<USART2>, Rx<USART2>,
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -306,6 +308,14 @@ use stm32f4xx_hal::{prelude::*,
        
        let gpioa = p.GPIOA.split();
        let gpiob = p.GPIOB.split();
+
+       let (tx, rx) = Serial::usart2(
+           p.USART2,
+           (gpioa.pa2.into_alternate_af7(),            //tx pa2  for GPS rx
+	    gpioa.pa3.into_alternate_af7()),           //rx pa3  for GPS tx
+           Config::default() .baudrate(9600.bps()), 
+           clocks,
+           ).unwrap().split();
 
        let spi = Spi::spi1(
            p.SPI1,
@@ -329,8 +339,8 @@ use stm32f4xx_hal::{prelude::*,
        let lora = Sx127x::spi(
     	    spi,                                                       //Spi
     	    gpioa.pa1.into_push_pull_output(),                         //CsPin         on PA1
-    	    gpiob.pb8.into_floating_input(),                           //BusyPin  DI00 on PB8
-            gpiob.pb9.into_floating_input(),                           //ReadyPin DI01 on PB9
+    	    gpiob.pb8.into_floating_input(),                           //BusyPin  DIO0 on PB8
+            gpiob.pb9.into_floating_input(),                           //ReadyPin DIO1 on PB9
     	    gpioa.pa0.into_push_pull_output(),                         //ResetPin      on PA0
     	    delay,					               //Delay
     	    &CONFIG_RADIO,					       //&Config
@@ -342,30 +352,32 @@ use stm32f4xx_hal::{prelude::*,
     
        //lora.lora_configure( config_lora, &config_ch ).unwrap(); # not yet pub, to change something
 
-       lora
+       (tx, rx,  lora)
        }
 
 
 #[cfg(feature = "stm32f7xx")] 
 use stm32f7xx_hal::{prelude::*,  
                     pac::Peripherals, 
-                    spi::{Spi, ClockDivider, Error,},
+                    serial::{Config, Serial, Tx, Rx, Oversampling, },
+		    pac::{USART2}, 
+                    spi::{Spi, ClockDivider, Error, },
                     delay::Delay,
                     }; 
 
     #[cfg(feature = "stm32f7xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
-    
-    //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>, Enabled<u8>>,  Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
+    fn setup() ->  (Tx<USART2>, Rx<USART2>,
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
 
+    //fn setup() ->  (Tx<USART2>, Rx<USART2>,
+    //                sx127x_lora::LoRa<Spi<SPI1, impl Pins<SPI1>, Enabled<u8>>,
+    //                                  PA1<Output<PushPull>>, 
+    //                                  PA0<Output<PushPull>>>) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
 
        let mut rcc   = p.RCC.constrain();
-       
        let gpioa = p.GPIOA.split();
        let gpiob = p.GPIOB.split();
 
@@ -381,7 +393,22 @@ use stm32f7xx_hal::{prelude::*,
           MODE,
           );
 
-       let clocks = rcc.cfgr.sysclk(64.mhz()).pclk1(32.mhz()).freeze();
+       // Relative to other hal setups, Serial::new is after spi::new because  clocks partially consumes rcc.
+       
+       let clocks = rcc.cfgr.sysclk(216.mhz()).freeze();
+       //let clocks = rcc.cfgr.sysclk(64.mhz()).pclk1(32.mhz()).freeze();
+
+       let (tx, rx) = Serial::new(
+           p.USART2,
+           (gpioa.pa2.into_alternate_af7(),            //tx pa2  for GPS
+	    gpioa.pa3.into_alternate_af7()),           //rx pa3  for GPS
+           clocks,
+           Config {
+                baud_rate: 9600.bps(),
+                oversampling: Oversampling::By16,
+                character_match: None,
+                },
+           ).split();
 
        let delay = Delay::new(cp.SYST, clocks);
 
@@ -397,19 +424,22 @@ use stm32f7xx_hal::{prelude::*,
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
        
-       lora
+       (tx, rx,  lora)
        }
 
 
 #[cfg(feature = "stm32h7xx")] 
 use stm32h7xx_hal::{prelude::*,  
                     pac::Peripherals, 
-                    spi::{ Error},
+                    serial::{Tx, Rx},
+		    pac::{USART2}, 
+                    spi::{Error},
                     delay::Delay,
-                   }; 
+                    }; 
 
     #[cfg(feature = "stm32h7xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, stm32h7xx_hal::Never>> {
+    fn setup() ->  (Tx<USART2>, Rx<USART2>,
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, stm32h7xx_hal::Never>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p      = Peripherals::take().unwrap();
@@ -421,6 +451,13 @@ use stm32h7xx_hal::{prelude::*,
 
        let gpioa  = p.GPIOA.split(ccdr.peripheral.GPIOA);
        let gpiob  = p.GPIOB.split(ccdr.peripheral.GPIOB);
+
+       let (tx, rx) = p.USART2.serial((gpioa.pa2.into_alternate_af7(),  //tx pa2 for GPS rx
+                                       gpioa.pa3.into_alternate_af7()), //rx pa3 for GPS tx
+                                      9600.bps(), 
+                                      ccdr.peripheral.USART2, 
+                                      &clocks).unwrap().split();
+
 
        // following github.com/stm32-rs/stm32h7xx-hal/blob/master/examples/spi.rs
        let spi = p.SPI1.spi(
@@ -448,7 +485,7 @@ use stm32h7xx_hal::{prelude::*,
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
 
-       lora
+       (tx, rx,  lora)
        }
 
 
@@ -456,21 +493,27 @@ use stm32h7xx_hal::{prelude::*,
 use stm32l0xx_hal::{prelude::*,  
                     pac::Peripherals, 
                     rcc,   // for ::Config but note name conflict with serial
-                    spi::{Error, },
+                    serial::{Config, Tx, Rx, Serial2Ext},
+		    pac::{USART2}, 
+                    spi::{ Error, },
                     }; 
 
     #[cfg(feature = "stm32l0xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, void::Void>> {
-
-    //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               void::Void,  Delay>,  Error, void::Void> {
+    fn setup() ->  (Tx<USART2>, Rx<USART2>,
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, void::Void>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();
        let mut rcc   = p.RCC.freeze(rcc::Config::hsi16());
        let gpioa     = p.GPIOA.split(&mut rcc);
        let gpiob     = p.GPIOB.split(&mut rcc);
+
+       let (tx, rx) = p.USART2.usart(
+           gpioa.pa2,                               //tx pa2  for GPS
+	   gpioa.pa3,                               //rx pa3  for GPS
+           Config::default() .baudrate(9600.bps()), 
+           &mut rcc
+           ).unwrap().split();
 
        // following  github.com/stm32-rs/stm32l0xx-hal/blob/master/examples/spi.rs
        let spi = p.SPI1.spi(
@@ -497,7 +540,7 @@ use stm32l0xx_hal::{prelude::*,
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
        
-       lora
+       (tx, rx,  lora)
        }
 
 
@@ -506,15 +549,14 @@ use stm32l0xx_hal::{prelude::*,
 use stm32l1xx_hal::{prelude::*, 
                     stm32::Peripherals, 
                     rcc,   // for ::Config but note name conflict with serial
+                    serial::{Config, SerialExt, Tx, Rx},
+		    stm32::{USART1},
                     spi::{Error,},
                     };
 
     #[cfg(feature = "stm32l1xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
-    
-    //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
-    //               PA4<Output<PushPull>>,  PB11<Input<Floating>>,  PB10<Input<Floating>>,  PA3<Output<PushPull>>, 
-    //               core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
+    fn setup() ->  (Tx<USART1>, Rx<USART1>,
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
 
        // instead of impl Pins<SPI1>  above could use 
        // Spi<SPI1, (PA5<Input<Floating>>,  PA6<Input<Floating>>, PA7<Input<Floating>>)>
@@ -528,10 +570,16 @@ use stm32l1xx_hal::{prelude::*,
        let gpioa = p.GPIOA.split();
        let gpiob = p.GPIOB.split();
 
+       let (tx, rx) = p.USART1.usart(
+                           (gpioa.pa9,                 //tx pa9   for GPS rx
+                            gpioa.pa10),               //rx pa10  for GPS tx
+                           Config::default() .baudrate(9600.bps()), 
+                           &mut rcc).unwrap().split();
+
        let spi = p.SPI1.spi(
-                          (gpioa.pa5,            // sck   on PA5  in board on Heltec
-                           gpioa.pa6,            // miso  on PA6  in board on Heltec
-                           gpioa.pa7             // mosi  on PA7  in board on Heltec
+                          (gpioa.pa5,            // sck   on PA5   in board on Heltec
+                           gpioa.pa6,            // miso  on PA6   in board on Heltec
+                           gpioa.pa7             // mosi  on PA7   in board on Heltec
                            ), 
                           MODE, 
                           8.mhz(), 
@@ -543,7 +591,6 @@ use stm32l1xx_hal::{prelude::*,
        
        // Create lora radio instance 
 
-//  Heltec lora_node STM32L151CCU6
        let lora = Sx127x::spi(
     	    spi,				                     //Spi
     	    gpioa.pa4.into_push_pull_output(),                       //CsPin         on PA4  in board on Heltec
@@ -554,7 +601,7 @@ use stm32l1xx_hal::{prelude::*,
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
        
-       lora                                            
+       (tx, rx,  lora)                                                
        }
 
 
@@ -562,13 +609,16 @@ use stm32l1xx_hal::{prelude::*,
 #[cfg(feature = "stm32l4xx")]
 use stm32l4xx_hal::{prelude::*,  
                     pac::Peripherals, 
+                    serial::{Config, Serial, Tx, Rx},
+		    pac::{USART2}, 
                     spi::{Spi, Error,},
                     delay::Delay,
                     }; 
 
     #[cfg(feature = "stm32l4xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> {
-    
+    fn setup() ->  (Tx<USART2>, Rx<USART2>,
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
+
        let cp        = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();
        let mut flash = p.FLASH.constrain();
@@ -579,6 +629,15 @@ use stm32l4xx_hal::{prelude::*,
       
        let mut gpioa = p.GPIOA.split(&mut rcc.ahb2);
        let mut gpiob = p.GPIOB.split(&mut rcc.ahb2);
+
+       let (tx, rx) = Serial::usart2(
+          p.USART2,
+          (gpioa.pa2.into_af7(&mut gpioa.moder, &mut gpioa.afrl),            //tx pa2  for GPS
+           gpioa.pa3.into_af7(&mut gpioa.moder, &mut gpioa.afrl)),           //rx pa3  for GPS
+          Config::default() .baudrate(9600.bps()), 
+          clocks,
+          &mut rcc.apb1r1,
+          ).split();
 
        let spi = Spi::spi1(
            p.SPI1,
@@ -597,7 +656,7 @@ use stm32l4xx_hal::{prelude::*,
        // Create lora radio instance 
 
        let lora = Sx127x::spi(
-    	    spi,					             //Spi
+    	    spi,					                             //Spi
     	    gpioa.pa1.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper),    //CsPin	     on PA1
     	    gpiob.pb8.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr),     //BusyPin  DIO0 on PB8
             gpiob.pb9.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr),     //ReadyPin DIO1 on PB9
@@ -606,7 +665,7 @@ use stm32l4xx_hal::{prelude::*,
     	    &CONFIG_RADIO,					                     //&Config
     	    ).unwrap();      // should handle error
        
-       lora
+       (tx, rx,  lora) 
        }
 
 
@@ -616,48 +675,91 @@ use stm32l4xx_hal::{prelude::*,
 #[entry]
 fn main() -> !{
 
-    let mut lora =  setup();  //delay is available in lora
+    let (mut _tx_gps, mut rx_gps,   mut lora) =  setup(); //  GPS, lora (delay is available in lora)
 
-    
-    // print out configuration (for debugging)
-    
-//    let v = lora.lora_get_config();
-//    hprintln!("configuration {}", v).unwrap();
-    
-//    hprintln!("chammel	  {}", lora.get_chammel()).unwrap();
+    // byte buffer   Nov 2020 limit data.len() < 255 in radio_sx127x  .start_transmit
+    let mut buffer: Vec<u8, consts::U80> = Vec::new();
+    let mut buf2:   Vec<u8, consts::U80> = Vec::new();
 
-    //hprintln!("mode		  {}", lora.get_mode()).unwrap();
-    //hprintln!("mode		  {}", lora.read_register(Register::RegOpMode.addr())).unwrap();
-    //hprintln!("bandwidth	  {:?}", lora.get_signal_bandwidth()).unwrap();
-    //hprintln!("coding_rate	  {:?}",  lora.get_coding_rate_4()).unwrap();
-    //hprintln!("spreading_factor {:?}",  lora.get_spreading_factor()).unwrap();
-    //hprintln!("spreading_factor {:?}",  
-    //hprintln!("invert_iq	  {:?}",  lora.get_invert_iq()).unwrap();
-    //hprintln!("tx_power	  {:?}",  lora.get_tx_power()).unwrap();
-    
-    
-    
-    // transmit something
-      
-    //let buffer = &[0xaa, 0xbb, 0xcc];
-    
-    let message = b"Hello, LoRa!";
-    
-    //let mut buffer = [0;100];      //Nov 2020 limit data.len() < 255 in radio_sx127x  .start_transmit
-    //for (i,c) in message.chars().enumerate() {
-    //	buffer[i] = c as u8;
-    //	}    
-    
+    hprintln!("buffer at {} of {}", buffer.len(), buffer.capacity()).unwrap();  //0 of 80
+    hprintln!("buf2   at {} of {}",   buf2.len(),   buf2.capacity()).unwrap();  //0 of 80
+    buffer.clear();
+    buf2.clear();
+
+    //hprintln!("going into write/read loop ^C to exit ...").unwrap();
+
+    let e: u8 = 9;           // replace char errors with "9"
+    let mut good = false;    // true while capturing a line
+
+    //let mut size: usize;   // buffer size should not be needed
+    //size = buffer.len();   //packet size
+    //hprintln!("read buffer {} of {}", size, buffer.capacity()).unwrap();
+
     loop {
-       lora.start_transmit(message).unwrap();    // should handle error
-       
-       match lora.check_transmit() {
-           Ok(b) => if b {hprintln!("TX complete").unwrap()} 
-                    else {hprintln!("TX not complete").unwrap()},
-           
-           Err(_err) => hprintln!("Error in lora.check_transmit(). Should return True or False.").unwrap(),
-           };
-       
-       lora.delay_ms(5000u32); //omit pending fix
-       };
+        let byte = match block!(rx_gps.read()) {
+	    Ok(byt)	  => byt,
+	    Err(_error) => e,
+	    };
+        
+	if   byte == 36  {  //  $ is 36. start of a line
+	   buffer.clear();
+	   good = true;     //start capturing line
+	   };
+	
+	if good {
+	   if buffer.push(byte).is_err() ||  byte == 13  { //transmit if end of line. \r is 13, \n is 10
+              	      
+	      //hprintln!("{:?}", &buffer).unwrap();
+
+	      // this transmits the whole GPS message string
+	      
+	      match lora.start_transmit(&buffer)  {
+		 Ok(b)      => b,  // b is ()
+		 Err(_err)  => {hprintln!("Error returned from lora.start_transmit().").unwrap();
+		                panic!("should reset in release mode."); 
+				},
+		 };
+
+	      // this transmits GPS N and E coordinates in hundredths of degrees
+	      
+	      if &buffer[0..6] == [36, 71, 80, 82, 77, 67] {   // if message id is $GPRMC
+	          
+		  for v in buffer[19..31].iter() { buf2.push(*v).unwrap(); };  // [19..31] is north/south.
+ 		  for v in         b"   ".iter() { buf2.push(*v).unwrap(); };
+ 		  for v in buffer[32..45].iter() { buf2.push(*v).unwrap(); };  // [32..45] is east/west
+	          
+	          hprintln!("{:?}", &buf2).unwrap();
+	          
+		  match lora.start_transmit(&buf2)  {
+		     Ok(b)      => b,  // b is ()
+		     Err(_err)  => {hprintln!("Error returned from lora.start_transmit().").unwrap();
+		                    panic!("should reset in release mode."); 
+				    },
+		     };
+		  };
+     
+	      // Note hprintln! requires semihosting. If hprintln! (thus also match section below) are 
+	      // removed then this example works on battery power with no computer attached.
+	      // (tested only on blackpill with stm32f411 )
+     	      
+	      // The first transmission often return false and prints "TX not complete", but works after that.
+	      // If this continually returns "TX not complete" then the radio should probably be reset,
+	      //  but should avoid panic_reset after first transmission. 
+	      
+	      match lora.check_transmit() {
+		 Ok(b)      => if ! b  { hprintln!("TX not complete").unwrap();
+		                         // if multible times then panic!("should reset in release mode."); 
+					 },
+		 Err(_err)  =>   {hprintln!("Error returned from lora.check_transmit().").unwrap();
+		                  panic!("should reset in release mode."); 
+				  },
+		 };
+                 	      
+	      buffer.clear();
+	      buf2.clear();
+     	      good = false;
+	      lora.delay_ms(5000u32);
+     	      };
+     	   };
+     	}
 }
