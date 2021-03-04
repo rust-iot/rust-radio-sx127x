@@ -11,6 +11,9 @@
 //!  The examples can be compiled with:
 //!    cargo build  --no-default-features  --target $TARGET --features=$HAL,$MCU  --example xxx
 //!
+//!  Before running, check  FREQUENCY below to be sure you have a channel setting appropriate for
+//!  your country, hardware and any testing sender/receiver on the other end of the communication.
+//!
 //!  To link, loaded and run using gdb and openocd (with INTERFACE and PROC set as below):
 //!  	openocd -f interface/$INTERFACE.cfg -f target/$PROC.cfg
 //!  and in another window (with TARGET, HAL, and MCU set as below):

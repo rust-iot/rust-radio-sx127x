@@ -620,6 +620,12 @@ use stm32l4xx_hal::{prelude::*,
 
 // End of hal/MCU specific setup. Following should be generic code.
 
+fn to_str( x:&[u8] ) -> &str {
+   match core::str::from_utf8(x) {
+      Ok(str)     => &str,
+      Err(_error) => "problem converting u8 to str ",
+   }
+}
 
 #[entry]
 fn main() -> !{
@@ -640,11 +646,13 @@ fn main() -> !{
 
        match poll {
             Ok(v)  if v  =>  {n = lora.get_received(&mut info, &mut buff).unwrap();
-                              hprintln!("RX complete ({:?}, length: {})", info, n).unwrap();
-                              hprintln!("{:?}", &buff[..n]).unwrap();
+                              //hprintln!("RX complete ({:?}, length: {})", info, n).unwrap();
+                              //hprintln!("{:?}", &buff[..n]).unwrap();
+			      // for some reason the next prints twice?
+                              hprintln!("{}", to_str(&buff[..n])).unwrap()
                               },
 
-            Ok(_v)       =>  hprint!(".").unwrap(),           // print . if nothing received
+            Ok(_v)       =>  (),  // hprint!(".").unwrap(),   // print "." if nothing received
             
 	    Err(err)     =>  hprintln!("poll error {:?} ", err).unwrap(),
             };

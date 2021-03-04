@@ -665,8 +665,8 @@ fn main() -> !{
     let mut buffer: Vec<u8, consts::U80> = Vec::new();
     let mut buf2:   Vec<u8, consts::U80> = Vec::new();
 
-    hprintln!("buffer at {} of {}", buffer.len(), buffer.capacity()).unwrap();  //0 of 80
-    hprintln!("buf2   at {} of {}",   buf2.len(),   buf2.capacity()).unwrap();  //0 of 80
+    //hprintln!("buffer at {} of {}", buffer.len(), buffer.capacity()).unwrap();  //0 of 80
+    //hprintln!("buf2   at {} of {}",   buf2.len(),   buf2.capacity()).unwrap();  //0 of 80
     buffer.clear();
     buf2.clear();
 
@@ -678,6 +678,7 @@ fn main() -> !{
     //let mut size: usize;   // buffer size should not be needed
     //size = buffer.len();   //packet size
     //hprintln!("read buffer {} of {}", size, buffer.capacity()).unwrap();
+    hprintln!("entering transmit loop").unwrap();
 
     loop {
         let byte = match block!(rx_gps.read()) {
@@ -712,8 +713,9 @@ fn main() -> !{
  		  for v in         b"   ".iter() { buf2.push(*v).unwrap(); };
  		  for v in buffer[32..45].iter() { buf2.push(*v).unwrap(); };  // [32..45] is east/west
 	          
-	          hprintln!("{:?}", &buf2).unwrap();
-	          
+	          //hprintln!("{:?}", &buf2).unwrap();
+	          hprint!(".").unwrap();   // print "."  on transmit of $GPRMC message (but not others)
+
 		  match lora.start_transmit(&buf2)  {
 		     Ok(b)      => b,  // b is ()
 		     Err(_err)  => {hprintln!("Error returned from lora.start_transmit().").unwrap();
