@@ -94,13 +94,13 @@ const CONFIG_RADIO: radio_sx127x::device::Config = radio_sx127x::device::Config 
 use stm32f0xx_hal::{prelude::*,   
                     pac::Peripherals, 
                     serial::{Serial, Tx, Rx},
-		    pac::{USART3},  
+		    pac::{USART2},
                     spi::{Spi, Error},
                     delay::Delay,
                     }; 
 
     #[cfg(feature = "stm32f0xx")]
-    fn setup() ->  (Tx<USART3>, Rx<USART3>,
+    fn setup() ->  (Tx<USART2>, Rx<USART2>,
                     impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
@@ -110,10 +110,14 @@ use stm32f0xx_hal::{prelude::*,
        let gpioa = p.GPIOA.split(&mut rcc);
        let gpiob = p.GPIOB.split(&mut rcc);
        
+       //  stm32f030xc builds with gpiob..into_alternate_af4(cs) USART3 on tx pb10, rx pb11 
+       //    but stm32f042  only has 2 usarts. 
+       //  Both have gpioa..into_alternate_af1(cs) USART2 with tx on pa2 and rx pa3
+
        let (tx, rx, sck, miso, mosi, _rst, pa1, pb8, pb9, pa0) = cortex_m::interrupt::free(move |cs| {
             (   
-                gpiob.pb10.into_alternate_af4(cs),        //tx pb10  for GPS
-                gpiob.pb11.into_alternate_af4(cs),        //rx pb11  for GPS
+                gpioa.pa2.into_alternate_af1(cs),         //tx pa2  for GPS
+                gpioa.pa3.into_alternate_af1(cs),         //rx pa3  for GPS
                 gpioa.pa5.into_alternate_af0(cs),         //   sck   on PA5
                 gpioa.pa6.into_alternate_af0(cs),	  //   miso  on PA6
                 gpioa.pa7.into_alternate_af0(cs),	  //   mosi  on PA7
@@ -128,7 +132,7 @@ use stm32f0xx_hal::{prelude::*,
             )
         });
 
-       let (tx, rx) = Serial::usart3(p.USART3, (tx, rx),  9600.bps(), &mut rcc, ).split();
+       let (tx, rx) = Serial::usart2(p.USART2, (tx, rx),  9600.bps(), &mut rcc, ).split();
    
        let spi = Spi::spi1(p.SPI1, (sck, miso, mosi), MODE, 8.mhz(), &mut rcc);
      
@@ -468,6 +472,7 @@ use stm32h7xx_hal::{prelude::*,
        }
 
 
+//   SKIP TESTING THIS, IT DOES NOT BUILD WITH RELEASE VERSION OF HAL
 #[cfg(feature = "stm32l0xx")] 
 use stm32l0xx_hal::{prelude::*,  
                     pac::Peripherals, 

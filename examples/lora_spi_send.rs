@@ -486,6 +486,7 @@ use stm32h7xx_hal::{prelude::*,
        }
 
 
+//   SKIP TESTING THIS, IT DOES NOT BUILD WITH RELEASE VERSION OF HAL
 #[cfg(feature = "stm32l0xx")] 
 use stm32l0xx_hal::{prelude::*,  
                     pac::Peripherals, 
@@ -493,8 +494,11 @@ use stm32l0xx_hal::{prelude::*,
                     spi::{Error, },
                     }; 
 
+    //#[cfg(feature = "stm32l0xx")] 
+    //use void::Void;     release version of this needs std. And it should not be in return value anyway
+
     #[cfg(feature = "stm32l0xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, void::Void>> {
+    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Void>> {
 
     //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
     //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
