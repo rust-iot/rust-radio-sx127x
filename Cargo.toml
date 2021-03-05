@@ -44,6 +44,8 @@ stm32l4x1   = ["stm32l4xx-hal/stm32l4x1", "stm32l4xx-hal/rt"]
 stm32l4x2   = ["stm32l4xx-hal/stm32l4x2", "stm32l4xx-hal/rt"]
 
 [dependencies]
+#embedded-hal-compat = "0.1.2"
+embedded-hal-compat = { git = "https://github.com/ryankurte/embedded-hal-compat.git", branch = "main"}
 libc = "0.2"
 log = { version = "0.4" }
 bitflags = "1.0"
@@ -52,15 +54,14 @@ serde = { version = "1.0", default-features = false, features = ["derive"], opti
 structopt = { version = "0.3", optional = true }
 simplelog = { version = "0.8", optional = true }
 humantime = { version = "2.0", optional = true }
-linux-embedded-hal = { version = "0.3", optional = true }
-#linux-embedded-hal = { version = "0.4.0-alpha.0", optional = true }
+#linux-embedded-hal = { version = "0.3", optional = true }
+linux-embedded-hal = { version = "0.4.0-alpha.0", optional = true }
 #driver-cp2130 = { version = "1.0.0-alpha.1", optional = true }
 
 # Next could be dev-dependencies since they are only for examples, but 
 #  dev-dependencies do not allow optional (as of cargo 1.44.1).
 stm32f0xx-hal = {version = "^0.17.1",optional = true} 
 stm32f1xx-hal = {version = "^0.7.0", optional = true} 
-#stm32f1xx-hal = { git = "https://github.com/stm32-rs/stm32f1xx-hal", branch = "embedded-hal-1.0.0-alpha.4"  }
 stm32f3xx-hal = {version = "^0.6.1", optional = true} 
 stm32f4xx-hal = {version = "^0.8.3", optional = true} 
 stm32f7xx-hal = {version = "^0.2.0", optional = true} 
@@ -87,17 +88,6 @@ default-features = false
 # Patch for radio-hal to update embedded-hal version
 radio = { git = "https://github.com/ryankurte/rust-radio.git", branch = "master" }
 
-
-#[patch."https://github.com/stm32-rs/stm32f4xx-hal"]
-#stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions" }
-##stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", 
-##                  rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/dd14acca71a5fcfdfd77bf531a30ab33b7dd2c0a"}
-
-#stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions" }
-##stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", 
-##                  rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/a1316e83dcb1e92fb52cc1d5d04a5bd066f14575"}
-##stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", 
-##                  rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/dd14acca71a5fcfdfd77bf531a30ab33b7dd2c0a"}
 
 #[dev-dependencies.color-backtrace] # this needs std, which causes example build to fail
 #color-backtrace = "0.5"

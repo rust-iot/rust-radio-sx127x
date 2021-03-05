@@ -67,6 +67,9 @@
 #![no_std]
 #![no_main]
 
+use embedded_hal_compat::IntoCompat;
+use embedded_hal_compat::eh1_0::blocking::delay::{DelayMs as _};
+
 #[cfg(debug_assertions)]
 extern crate panic_semihosting;
 
@@ -226,22 +229,14 @@ use stm32f1xx_hal::{prelude::*,
        // Create lora radio instance 
 
        let lora = Sx127x::spi(
-    	    spi,					             //Spi
+    	    spi.compat(),					             //Spi
     	    gpioa.pa1.into_push_pull_output(&mut gpioa.crl),         //CsPin         on PA1
     	    gpiob.pb8.into_floating_input(&mut gpiob.crh),           //BusyPin  DIO0 on PB8
             gpiob.pb9.into_floating_input(&mut gpiob.crh),           //ReadyPin DIO1 on PB9
     	    gpioa.pa0.into_push_pull_output(&mut gpioa.crl),         //ResetPin      on PA0
-    	    delay,					             //Delay
+    	    delay.compat(),					             //Delay
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
-      
-       //let mut lora =  match lora {
-            //  Ok(v)   => v,
-            //  Err(error) => {hprintln!("Setup Error: {:?}", error);
-        //                 asm::bkpt();
-        //                 //panic();
-        //                 }
-        //  };
 
        lora
        }
@@ -697,6 +692,6 @@ fn main() -> !{
            Err(_err) => hprintln!("Error in lora.check_transmit(). Should return True or False.").unwrap(),
            };
        
-       lora.delay_ms(5000u32); //omit pending fix
+       lora.try_delay_ms(5000u32); 
        };
 }
