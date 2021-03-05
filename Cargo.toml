@@ -6,7 +6,6 @@ authors = ["Ryan Kurte <ryankurte@gmail.com>"]
 edition = "2018"
 repository = "https://github.com/ryankurte/rust-radio-sx127x"
 license = "MPL-2.0"
-edition = "2018"
 
 #[package.metadata.commands]
 #docker-build = "docker run --rm -it -v`pwd`:/work -v$HOME/.cargo/registry:/root/.cargo/registry ryankurte/rust-embedded /bin/bash -c \"cd /work && cargo build --target armv7-unknown-linux-gnueabihf\""
