@@ -3,19 +3,46 @@ name = "radio-sx127x"
 description = "Rust driver for the Semtec SX127x Sub GHZ LoRa Radio ICs"
 version = "0.10.1"
 authors = ["Ryan Kurte <ryankurte@gmail.com>"]
+edition = "2018"
 repository = "https://github.com/ryankurte/rust-radio-sx127x"
 license = "MPL-2.0"
 edition = "2018"
+
+#[package.metadata.commands]
+#docker-build = "docker run --rm -it -v`pwd`:/work -v$HOME/.cargo/registry:/root/.cargo/registry ryankurte/rust-embedded /bin/bash -c \"cd /work && cargo build --target armv7-unknown-linux-gnueabihf\""
 
 [features]
 util = [ "structopt", "driver-pal/hal", "simplelog", "humantime" ] 
 default = [ "util", "serde" ]
 
-# for examples
-#stm32f4xx = []
-#stm32f411 = ["stm32f4xx-hal/stm32f411", "stm32f4xx-hal/rt"] 
+# features for examples
+stm32f0xx = []
 stm32f1xx = []
-stm32f103 = ["stm32f1xx-hal/stm32f103", "stm32f1xx-hal/rt"]
+stm32f3xx = []
+stm32f4xx = []
+stm32f7xx = []
+stm32h7xx = []
+stm32l0xx = []
+stm32l1xx = []
+stm32l4xx = []
+
+stm32f042   = ["stm32f0xx-hal/stm32f042",   "stm32f0xx-hal/rt"]
+stm32f030xc = ["stm32f0xx-hal/stm32f030xc", "stm32f0xx-hal/rt"]
+stm32f100   = ["stm32f1xx-hal/stm32f100",   "stm32f1xx-hal/rt"]
+stm32f101   = ["stm32f1xx-hal/stm32f101",   "stm32f1xx-hal/rt"]
+stm32f103   = ["stm32f1xx-hal/stm32f103",   "stm32f1xx-hal/rt"] 
+stm32f303xc = ["stm32f3xx-hal/stm32f303xc", "stm32f3xx-hal/rt"] 
+stm32f401   = ["stm32f4xx-hal/stm32f401", "stm32f4xx-hal/rt"] 
+stm32f405   = ["stm32f4xx-hal/stm32f405", "stm32f4xx-hal/rt"] 
+stm32f411   = ["stm32f4xx-hal/stm32f411", "stm32f4xx-hal/rt"] 
+stm32f722   = ["stm32f7xx-hal/stm32f722", "stm32f7xx-hal/rt"] 
+stm32h742   = ["stm32h7xx-hal/stm32h742", "stm32h7xx-hal/rt"]
+stm32l0x2   = ["stm32l0xx-hal/stm32l0x2", "stm32l0xx-hal/rt", "stm32l0xx-hal/mcu-STM32L072KZTx"]
+stm32l0x1   = ["stm32l0xx-hal/stm32l0x1", "stm32l0xx-hal/rt", "stm32l0xx-hal/mcu-STM32L071KBTx"]
+stm32l100   = ["stm32l1xx-hal/stm32l100", "stm32l1xx-hal/rt"]
+stm32l151   = ["stm32l1xx-hal/stm32l151", "stm32l1xx-hal/rt"]
+stm32l4x1   = ["stm32l4xx-hal/stm32l4x1", "stm32l4xx-hal/rt"]
+stm32l4x2   = ["stm32l4xx-hal/stm32l4x2", "stm32l4xx-hal/rt"]
 
 [dependencies]
 libc = "0.2"
@@ -23,11 +50,25 @@ log = { version = "0.4" }
 bitflags = "1.0"
 serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
 
-structopt = { version = "0.3.21", optional = true }
-simplelog = { version = "0.8.0", optional = true }
-humantime = { version = "2.0.0", optional = true }
-linux-embedded-hal = { version = "0.4.0-alpha.0", optional = true }
-driver-cp2130 = { version = "1.0.0-alpha.1", optional = true }
+structopt = { version = "0.3", optional = true }
+simplelog = { version = "0.8", optional = true }
+humantime = { version = "2.0", optional = true }
+linux-embedded-hal = { version = "0.3", optional = true }
+#linux-embedded-hal = { version = "0.4.0-alpha.0", optional = true }
+#driver-cp2130 = { version = "1.0.0-alpha.1", optional = true }
+
+# Next could be dev-dependencies since they are only for examples, but 
+#  dev-dependencies do not allow optional (as of cargo 1.44.1).
+stm32f0xx-hal = {version = "^0.17.1",optional = true} 
+stm32f1xx-hal = {version = "^0.7.0", optional = true} 
+#stm32f1xx-hal = { git = "https://github.com/stm32-rs/stm32f1xx-hal", branch = "embedded-hal-1.0.0-alpha.4"  }
+stm32f3xx-hal = {version = "^0.6.1", optional = true} 
+stm32f4xx-hal = {version = "^0.8.3", optional = true} 
+stm32f7xx-hal = {version = "^0.2.0", optional = true} 
+stm32h7xx-hal = {version = "^0.8.0", optional = true} 
+stm32l0xx-hal = {version = "^0.6.2", optional = true} 
+stm32l1xx-hal = {version = "^0.1.0",   optional = true,  default-features = false} 
+stm32l4xx-hal = {version = "^0.6.0", optional = true}
 
 [dependencies.radio]
 version = "0.7.0"
@@ -39,39 +80,37 @@ version = "1.0.0-alpha.4"
 version = "0.8.0-alpha.0"
 default-features = false
 
-#[dev-dependencies.color-backtrace] # this needs std, which causes example build to fail
-#color-backtrace = "0.5"
+[dependencies.embedded-spi]
+version = "0.6"
+default-features = false 
 
-[dev-dependencies]                     # for examples
-cortex-m = "0.6.0"
-#nb = "0.1.2"
-cortex-m-rt = "0.6.8"
-panic-halt = "0.2.0"
-panic-semihosting = "0.5.2"
-cortex-m-semihosting = "0.3.3"
-#embedded-spi  = { version = "0.6", default-features = false }
+[patch.crates-io]
+# Patch for radio-hal to update embedded-hal version
+radio = { git = "https://github.com/ryankurte/rust-radio.git", branch = "master" }
 
-stm32f1xx-hal = { git = "https://github.com/eldruin/stm32f1xx-hal", rev = "7cb3c53"}   #1.0.0-alpha.4
-#stm32f1xx-hal = { git = "https://github.com/stm32-rs/stm32f1xx-hal", branch = "embedded-hal-1.0.0-alpha.4"  }
-
-#stm32f4xx-hal = "0.8.3"
-#stm32f4xx-hal = { git = "https://github.com/stm32-rs/stm32f4xx-hal", branch = "master" }
-#stm32f1xx-hal = { git = "https://github.com/stm32-rs/stm32f1xx-hal", branch = "master" }
 
 #[patch."https://github.com/stm32-rs/stm32f4xx-hal"]
 #stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions" }
 ##stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", 
 ##                  rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/dd14acca71a5fcfdfd77bf531a30ab33b7dd2c0a"}
 
-[patch.crates-io]
-# Patch for radio-hal to update embedded-hal version
-radio = { git = "https://github.com/ryankurte/rust-radio.git", branch = "master" }
 #stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions" }
 ##stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", 
 ##                  rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/a1316e83dcb1e92fb52cc1d5d04a5bd066f14575"}
 ##stm32f4xx-hal = { git = "https://github.com/maxekman/stm32f4xx-hal", branch="update-to-try-functions", 
 ##                  rev = "https://github.com/stm32-rs/stm32f4xx-hal/commit/dd14acca71a5fcfdfd77bf531a30ab33b7dd2c0a"}
 
+#[dev-dependencies.color-backtrace] # this needs std, which causes example build to fail
+#color-backtrace = "0.5"
+
+[dev-dependencies]                     # for examples
+cortex-m = "0.6.7"
+cortex-m-rt = "0.6.13"
+cortex-m-semihosting = "0.3.7"
+panic-halt = "0.2.0"
+panic-semihosting = ">=0.5.2"
+heapless = ">=0.4.3"                   # for example lora_spi_gps
+nb = ">=0.1.2"                         # for example lora_spi_gps
 
 [[bin]]
 name = "sx127x-util"
@@ -84,18 +123,17 @@ path = "tests/integration.rs"
 required-features = ["utils"]
 
 
-
 # Fix for libusb-sys package discovery
-libusb-sys = { git = "https://github.com/cmsd2/libusb-sys" } 
+#libusb-sys = { git = "https://github.com/cmsd2/libusb-sys" } 
 
 [[example]]
 name = "lora_spi_send"
 path = "examples/lora_spi_send.rs"
-required-features = ["stm32f1xx", "stm32f103"]
-#required-features = ["stm32f4xx", "stm32f411"]
-#optional = true
 
+[[example]]
+name = "lora_spi_receive"
+path = "examples/lora_spi_receive.rs"
 
-#  build example  (no-default-features because some default-features require std)
-# cargo build   --target thumbv7em-none-eabihf --no-default-features  --features="stm32f411, stm32f4xx"  --example lora_spi_send
-# cargo build   --target thumbv7m-none-eabi    --no-default-features  --features="stm32f103, stm32f1xx"  --example lora_spi_send
+[[example]]
+name = "lora_spi_gps"
+path = "examples/lora_spi_gps.rs"
