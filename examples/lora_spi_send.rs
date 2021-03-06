@@ -598,17 +598,8 @@ use stm32l1xx_hal::{prelude::*,
                     };
 
     #[cfg(feature = "stm32l1xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallibl>> {
+    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallible>> {
     
-    //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
-    //               PA4<Output<PushPull>>,  PB11<Input<Floating>>,  PB10<Input<Floating>>,  PA3<Output<PushPull>>, 
-    //               Infallible,  Delay>,  Error, Infallible> {
-
-       // instead of impl Pins<SPI1>  above could use 
-       // Spi<SPI1, (PA5<Input<Floating>>,  PA6<Input<Floating>>, PA7<Input<Floating>>)>
-       // which also requires  gpio::{gpioa::{PA5, PA6, PA7}, Input,  Floating, 
-       // Possibly should also be able to use  'impl SpiExt<SPI1>' but no luck yet.
-
        let cp = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();
        let mut rcc   = p.RCC.freeze(rcc::Config::hsi());
