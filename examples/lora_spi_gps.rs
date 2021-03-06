@@ -25,6 +25,8 @@ extern crate panic_semihosting;
 extern crate panic_halt;
 //extern crate panic_reset;
 
+use core::convert::Infallible;
+
 use nb::block;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::*;
@@ -126,7 +128,7 @@ use stm32f0xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32f0xx")]
     fn setup() ->  (Tx<USART2>, Rx<USART2>,
-                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallible>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let mut p  = Peripherals::take().unwrap();
@@ -184,7 +186,7 @@ use stm32f1xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32f1xx")]
     fn setup() ->  (Tx<USART2>, Rx<USART2>,
-                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible, core::convert::Infallible>> ) {
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallible>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -249,7 +251,7 @@ use stm32f3xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32f3xx")]
     fn setup() ->  (Tx<USART2>, Rx<USART2>,
-                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallible>> ) {
       
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -312,7 +314,7 @@ use stm32f4xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32f4xx")]
     fn setup() ->  (Tx<USART2>, Rx<USART2>,
-                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -381,7 +383,7 @@ use stm32f7xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32f7xx")]
     fn setup() ->  (Tx<USART2>, Rx<USART2>,
-                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible>, Infallible> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -566,7 +568,7 @@ use stm32l1xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32l1xx")]
     fn setup() ->  (Tx<USART1>, Rx<USART1>,
-                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallible>> ) {
 
        // instead of impl Pins<SPI1>  above could use 
        // Spi<SPI1, (PA5<Input<Floating>>,  PA6<Input<Floating>>, PA7<Input<Floating>>)>
@@ -627,7 +629,7 @@ use stm32l4xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32l4xx")]
     fn setup() ->  (Tx<USART2>, Rx<USART2>,
-                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallible>> ) {
 
        let cp        = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();

@@ -27,6 +27,8 @@ extern crate panic_semihosting;
 #[cfg(not(debug_assertions))]
 extern crate panic_halt;
 
+use core::convert::Infallible;
+
 // use nb::block;
 use cortex_m_rt::entry;
 use cortex_m_semihosting::*;
@@ -135,7 +137,7 @@ use stm32f0xx_hal::{prelude::*,
     fn setup() ->   Sx127x<Wrapper<Spi<SPI1, 
                         PA5<Alternate<AF0>>,  PA6<Alternate<AF0>>, PA7<Alternate<AF0>>,  EightBit>, Error, 
                    PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-                   core::convert::Infallible,  Delay>, Error, core::convert::Infallible> {
+                   Infallible,  Delay>, Error, Infallible, Infallible> {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let mut p  = Peripherals::take().unwrap();
@@ -181,12 +183,12 @@ use stm32f1xx_hal::{prelude::*,
                     }; 
 
     #[cfg(feature = "stm32f1xx")]
-    fn setup() ->  impl DelayMs<u32> + Receive<Error=sx127xError<Error, core::convert::Infallible, core::convert::Infallible>> {
+    fn setup() ->  impl DelayMs<u32> + Receive<Error=sx127xError<Error, Infallible, Infallible>> {
 
     //fn setup() ->  Sx127x<Wrapper<Spi<SPI1, Spi1NoRemap,
     //                    (PA5<Alternate<PushPull>>,  PA6<Input<Floating>>, PA7<Alternate<PushPull>>), u8>, Error, 
     //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               core::convert::Infallible,  Delay>, Error, core::convert::Infallible, core::convert::Infallible> {
+    //               Infallible,  Delay>, Error, Infallible, Infallible> {
     // this needs use
     //                spi::{Spi1NoRemap,},
     //                gpio::{Input, Output, PushPull, Floating, Alternate,
@@ -252,7 +254,7 @@ use stm32f3xx_hal::{prelude::*,
     fn setup() ->  Sx127x<Wrapper<Spi<SPI1, 
                            (PA5<AF5>,    PA6<AF5>,   PA7<AF5>)>,  Error, 
                    PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-                   core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
+                   Infallible,  Delay>,  Error, Infallible, Infallible> {
     
     //fn setup() ->  impl Transmit {
       
@@ -311,7 +313,7 @@ use stm32f4xx_hal::{prelude::*,
     fn setup() ->  Sx127x<Wrapper<Spi<SPI1, 
                            (PA5<Alternate<AF5>>,    PA6<Alternate<AF5>>,   PA7<Alternate<AF5>>)>,  Error, 
                    PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-                   core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
+                   Infallible,  Delay>,  Error, Infallible, Infallible> {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -374,7 +376,7 @@ use stm32f7xx_hal::{prelude::*,
     #[cfg(feature = "stm32f7xx")]
     fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>, Enabled<u8>>,  Error, 
                    PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-                   core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
+                   Infallible,  Delay>,  Error, Infallible, Infallible> {
 
 
        let cp = cortex_m::Peripherals::take().unwrap();
@@ -543,7 +545,7 @@ use stm32l1xx_hal::{prelude::*,
     #[cfg(feature = "stm32l1xx")]
     fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
                    PA4<Output<PushPull>>,  PB11<Input<Floating>>,  PB10<Input<Floating>>,  PA3<Output<PushPull>>, 
-                   core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
+                   Infallible,  Delay>,  Error, Infallible, Infallible> {
 
        // instead of impl Pins<SPI1>  above could use 
        // Spi<SPI1, (PA5<Input<Floating>>,  PA6<Input<Floating>>, PA7<Input<Floating>>)>
@@ -603,7 +605,7 @@ use stm32l4xx_hal::{prelude::*,
 		                            PA6<Alternate<AF5, Input<Floating>>>, 
 					    PA7<Alternate<AF5, Input<Floating>>> )>, Error, 
                    PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-                   core::convert::Infallible,  Delay>,  Error, core::convert::Infallible> {
+                   Infallible,  Delay>,  Error, Infallible, Infallible> {
 
        let cp        = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();
