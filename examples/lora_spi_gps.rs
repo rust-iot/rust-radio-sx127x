@@ -32,8 +32,33 @@ use cortex_m_semihosting::*;
 use heapless::{consts, Vec};
 
 use embedded_hal::{blocking::delay::DelayMs,
-                   spi::{Mode, Phase, Polarity},
 		   };
+
+use embedded_hal_compat::IntoCompat;
+use embedded_hal_compat::eh1_0::blocking::delay::{DelayMs as _};
+
+// To define constant MODE it should be possible to use next in place of following hal specific versions,
+// but embedded_hal_compat isn't covering it yet.
+//use embedded_hal::{spi::{Mode, Phase, Polarity}, };
+
+#[cfg(feature = "stm32f0xx")]  //  eg stm32f030xc
+use stm32f0xx_hal::{spi::{Mode,Phase, Polarity}}; 
+#[cfg(feature = "stm32f1xx")]  //  eg blue pill stm32f103
+use stm32f1xx_hal::{spi::{Mode,Phase, Polarity}}; 
+#[cfg(feature = "stm32f3xx")]  //  eg Discovery-stm32f303
+use stm32f3xx_hal::{spi::{Mode,Phase, Polarity}}; 
+#[cfg(feature = "stm32f4xx")] // eg Nucleo-64 stm32f411, blackpill stm32f411, blackpill stm32f401
+use stm32f4xx_hal::{spi::{Mode,Phase, Polarity}}; 
+#[cfg(feature = "stm32f7xx")] 
+use stm32f7xx_hal::{spi::{Mode,Phase, Polarity}}; 
+#[cfg(feature = "stm32h7xx")] 
+use stm32h7xx_hal::{spi::{Mode,Phase, Polarity}}; 
+#[cfg(feature = "stm32l0xx")] 
+use stm32l0xx_hal::{spi::{Mode,Phase, Polarity}}; 
+#[cfg(feature = "stm32l1xx") ] // eg  Discovery kit stm32l100 and Heltec lora_node STM32L151CCU6
+use stm32l1xx_hal::{spi::{Mode,Phase, Polarity}}; 
+#[cfg(feature = "stm32l4xx")]
+use stm32l4xx_hal::{spi::{Mode,Phase, Polarity}}; 
 
 //use asm_delay::{ AsmDelay, bitrate, };
 
@@ -140,7 +165,8 @@ use stm32f0xx_hal::{prelude::*,
 
        // Create lora radio instance 
 
-       let lora = Sx127x::spi( spi, pa1, pb8, pb9, pa0, delay, &CONFIG_RADIO, ).unwrap(); // should handle error
+       let lora = Sx127x::spi( spi.compat(), pa1.compat(), pb8.compat(), pb9.compat(), pa0.compat(), 
+                              delay.compat(), &CONFIG_RADIO, ).unwrap(); // should handle error
 
 
        (tx, rx,  lora)
@@ -158,7 +184,7 @@ use stm32f1xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32f1xx")]
     fn setup() ->  (Tx<USART2>, Rx<USART2>,
-                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible>> ) {
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, core::convert::Infallible, core::convert::Infallible>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -199,12 +225,12 @@ use stm32f1xx_hal::{prelude::*,
        // Create lora radio instance 
 
        let lora = Sx127x::spi(
-    	    spi,					             //Spi
-    	    gpioa.pa1.into_push_pull_output(&mut gpioa.crl),         //CsPin         on PA1
-    	    gpiob.pb8.into_floating_input(&mut gpiob.crh),           //BusyPin  DIO0 on PB8
-            gpiob.pb9.into_floating_input(&mut gpiob.crh),           //ReadyPin DIO1 on PB9
-    	    gpioa.pa0.into_push_pull_output(&mut gpioa.crl),         //ResetPin      on PA0
-    	    delay,					             //Delay
+    	    spi.compat(),					             //Spi
+    	    gpioa.pa1.into_push_pull_output(&mut gpioa.crl).compat(),         //CsPin         on PA1
+    	    gpiob.pb8.into_floating_input(&mut gpiob.crh).compat(),           //BusyPin  DIO0 on PB8
+            gpiob.pb9.into_floating_input(&mut gpiob.crh).compat(),           //ReadyPin DIO1 on PB9
+    	    gpioa.pa0.into_push_pull_output(&mut gpioa.crl).compat(),         //ResetPin      on PA0
+    	    delay.compat(),					             //Delay
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
       
@@ -261,11 +287,11 @@ use stm32f3xx_hal::{prelude::*,
        // Create lora radio instance 
 
        let lora = Sx127x::spi(
-    	    spi,					             //Spi
-    	    gpioa.pa1.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper),   //CsPin	    on PA1
-    	    gpiob.pb8.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr),    //BusyPin  DIO0 on PB8
-            gpiob.pb9.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr),    //ReadyPin DIO1 on PB9
-    	    gpioa.pa0.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper),   //ResetPin      on PA0
+    	    spi.compat(),					             //Spi
+    	    gpioa.pa1.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper).compat(),   //CsPin	    on PA1
+    	    gpiob.pb8.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr).compat(),    //BusyPin  DIO0 on PB8
+            gpiob.pb9.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr).compat(),    //ReadyPin DIO1 on PB9
+    	    gpioa.pa0.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper).compat(),   //ResetPin      on PA0
     	    delay,					                            //Delay
     	    &CONFIG_RADIO,					                    //&Config
     	    ).unwrap();      // should handle error
@@ -325,12 +351,12 @@ use stm32f4xx_hal::{prelude::*,
        // however, gives trait bound  ... InputPin` is not satisfied
     
        let lora = Sx127x::spi(
-    	    spi,                                                       //Spi
-    	    gpioa.pa1.into_push_pull_output(),                         //CsPin         on PA1
-    	    gpiob.pb8.into_floating_input(),                           //BusyPin  DIO0 on PB8
-            gpiob.pb9.into_floating_input(),                           //ReadyPin DIO1 on PB9
-    	    gpioa.pa0.into_push_pull_output(),                         //ResetPin      on PA0
-    	    delay,					               //Delay
+    	    spi.compat(),                                                       //Spi
+    	    gpioa.pa1.into_push_pull_output().compat(),                         //CsPin         on PA1
+    	    gpiob.pb8.into_floating_input().compat(),                           //BusyPin  DIO0 on PB8
+            gpiob.pb9.into_floating_input().compat(),                           //ReadyPin DIO1 on PB9
+    	    gpioa.pa0.into_push_pull_output().compat(),                         //ResetPin      on PA0
+    	    delay.compat(),					               //Delay
     	    &CONFIG_RADIO,					       //&Config
     	    ).unwrap();      // should handle error
   
@@ -459,12 +485,12 @@ use stm32h7xx_hal::{prelude::*,
        // Create lora radio instance 
 
        let lora = Sx127x::spi(
-    	    spi,				                     //Spi
-    	    gpioa.pa1.into_push_pull_output(),                       //CsPin         on PA1
-    	    gpiob.pb8.into_floating_input(),                         //BusyPin  DIO0 on PB8
-            gpiob.pb9.into_floating_input(),                         //ReadyPin DIO1 on PB9
-    	    gpioa.pa0.into_push_pull_output(),                       //ResetPin      on PA0
-    	    delay,					             //Delay
+    	    spi.compat(),				                     //Spi
+    	    gpioa.pa1.into_push_pull_output().compat(),                       //CsPin         on PA1
+    	    gpiob.pb8.into_floating_input().compat(),                         //BusyPin  DIO0 on PB8
+            gpiob.pb9.into_floating_input().compat(),                         //ReadyPin DIO1 on PB9
+    	    gpioa.pa0.into_push_pull_output().compat(),                       //ResetPin      on PA0
+    	    delay.compat(),					             //Delay
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
 
@@ -515,12 +541,12 @@ use stm32l0xx_hal::{prelude::*,
        // Create lora radio instance 
 
        let lora = Sx127x::spi(
-    	    spi,				                     //Spi
-    	    gpioa.pa1.into_push_pull_output(),                       //CsPin         on PA1
-    	    gpiob.pb8.into_floating_input(),                         //BusyPin  DIO0 on PB8
-            gpiob.pb9.into_floating_input(),                         //ReadyPin DIO1 on PB9
-    	    gpioa.pa0.into_push_pull_output(),                       //ResetPin      on PA0
-    	    delay,					             //Delay
+    	    spi.compat(),				                     //Spi
+    	    gpioa.pa1.into_push_pull_output().compat(),                       //CsPin         on PA1
+    	    gpiob.pb8.into_floating_input().compat(),                         //BusyPin  DIO0 on PB8
+            gpiob.pb9.into_floating_input().compat(),                         //ReadyPin DIO1 on PB9
+    	    gpioa.pa0.into_push_pull_output().compat(),                       //ResetPin      on PA0
+    	    delay.compat(),					             //Delay
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
        
@@ -576,12 +602,12 @@ use stm32l1xx_hal::{prelude::*,
        // Create lora radio instance 
 
        let lora = Sx127x::spi(
-    	    spi,				                     //Spi
-    	    gpioa.pa4.into_push_pull_output(),                       //CsPin         on PA4  in board on Heltec
-    	    gpiob.pb11.into_floating_input(),                        //BusyPin  DIO0 on PB11 in board on Heltec
-            gpiob.pb10.into_floating_input(),                        //ReadyPin DIO1 on PB10 in board on Heltec
-    	    gpioa.pa3.into_push_pull_output(),                       //ResetPin      on PA3  in board on Heltec
-    	    delay,					             //Delay
+    	    spi.compat(),				                     //Spi
+    	    gpioa.pa4.into_push_pull_output().compat(),                       //CsPin         on PA4  in board on Heltec
+    	    gpiob.pb11.into_floating_input().compat(),                        //BusyPin  DIO0 on PB11 in board on Heltec
+            gpiob.pb10.into_floating_input().compat(),                        //ReadyPin DIO1 on PB10 in board on Heltec
+    	    gpioa.pa3.into_push_pull_output().compat(),                       //ResetPin      on PA3  in board on Heltec
+    	    delay.compat(),					             //Delay
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
        
@@ -640,12 +666,12 @@ use stm32l4xx_hal::{prelude::*,
        // Create lora radio instance 
 
        let lora = Sx127x::spi(
-    	    spi,					                             //Spi
-    	    gpioa.pa1.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper),    //CsPin	     on PA1
-    	    gpiob.pb8.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr),     //BusyPin  DIO0 on PB8
-            gpiob.pb9.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr),     //ReadyPin DIO1 on PB9
-    	    gpioa.pa0.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper),    //ResetPin      on PA0
-    	    delay,					                             //Delay
+    	    spi.compat(),					                             //Spi
+    	    gpioa.pa1.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper).compat(),    //CsPin	     on PA1
+    	    gpiob.pb8.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr).compat(),     //BusyPin  DIO0 on PB8
+            gpiob.pb9.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr).compat(),     //ReadyPin DIO1 on PB9
+    	    gpioa.pa0.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper).compat(),    //ResetPin      on PA0
+    	    delay.compat(),					                             //Delay
     	    &CONFIG_RADIO,					                     //&Config
     	    ).unwrap();      // should handle error
        
@@ -744,7 +770,7 @@ fn main() -> !{
 	      buffer.clear();
 	      buf2.clear();
      	      good = false;
-	      lora.delay_ms(5000u32);
+	      lora.try_delay_ms(5000u32);
      	      };
      	   };
      	}
