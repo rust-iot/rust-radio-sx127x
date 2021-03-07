@@ -141,8 +141,8 @@ jobs:
            - mcu:  stm32l151
              hal: "stm32l1xx"
              trg: "thumbv7m-none-eabi"
-           - mcu:  stm32l151
-             hal: "stm32l1xx"
+           - mcu:  stm32l4x2
+             hal: "stm32l4xx"
              trg: "thumbv7em-none-eabi"
     steps:
       - uses: actions/checkout@v2

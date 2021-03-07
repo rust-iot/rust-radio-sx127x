@@ -71,7 +71,7 @@ stm32l1xx-hal = {version = "^0.1.0",   optional = true,  default-features = fals
 stm32l4xx-hal = {version = "^0.6.0", optional = true}
 
 [dependencies.radio]
-version = "0.7.0"
+version = "0.8.1"
 
 [dependencies.embedded-hal]
 version = "1.0.0-alpha.4"

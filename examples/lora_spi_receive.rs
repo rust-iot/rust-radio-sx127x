@@ -68,7 +68,7 @@ use stm32l4xx_hal::{spi::{Mode,Phase, Polarity}};
 
 use radio_sx127x::Error as sx127xError;                           // Error name conflict with hals
 use radio_sx127x::{prelude::*,                                     // prelude has Sx127x,
-		   device::{Modem, Channel, PaConfig, PaSelect,},
+		   device::{Modem, Channel, PaConfig, PaSelect, PacketInfo,},
                    device::lora::{LoRaConfig, LoRaChannel, Bandwidth, SpreadingFactor, CodingRate,
                                   PayloadLength, PayloadCrc, FrequencyHopping, },
 		   };
@@ -77,7 +77,7 @@ use radio_sx127x::{prelude::*,                                     // prelude ha
 //use radio::{Receive, Transmit, Radio}; 
 //use radio::{Receive, ReceiveInfo}; 
 use radio::{Receive, }; 
-use embedded_spi::wrapper::Wrapper;
+//use embedded_spi::wrapper::Wrapper;
 
 // lora and radio parameters
 
@@ -299,21 +299,15 @@ use stm32f3xx_hal::{prelude::*,
 
 #[cfg(feature = "stm32f4xx")] // eg Nucleo-64 stm32f411, blackpill stm32f411, blackpill stm32f401
 use stm32f4xx_hal::{prelude::*,  
-                    stm32::{Peripherals, SPI1},
+                    stm32::{Peripherals},
                     spi::{Spi, Error},
                     delay::Delay,
-                    gpio::{gpioa::{PA5, PA6, PA7}, Alternate, AF5,  
-                           gpioa::{PA0, PA1}, Output, PushPull,
-			   gpiob::{PB8, PB9}, Input, Floating},
                     time::MegaHertz,
                     }; 
 
 
     #[cfg(feature = "stm32f4xx")]
-    fn setup() ->  Sx127x<Wrapper<Spi<SPI1, 
-                           (PA5<Alternate<AF5>>,    PA6<Alternate<AF5>>,   PA7<Alternate<AF5>>)>,  Error, 
-                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-                   Infallible,  Delay>,  Error, Infallible, Infallible> {
+    fn setup() -> impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, Infallible, Infallible>>  {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();

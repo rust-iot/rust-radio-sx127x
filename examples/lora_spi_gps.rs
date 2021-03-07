@@ -314,7 +314,7 @@ use stm32f4xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32f4xx")]
     fn setup() ->  (Tx<USART2>, Rx<USART2>,
-                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible>> ) {
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallible>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
