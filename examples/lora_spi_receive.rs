@@ -183,7 +183,7 @@ use stm32f1xx_hal::{prelude::*,
                     }; 
 
     #[cfg(feature = "stm32f1xx")]
-    fn setup() ->  impl DelayMs<u32> + Receive<Error=sx127xError<Error, Infallible, Infallible>> {
+    fn setup() ->  impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, Infallible, Infallible>> {
 
     //fn setup() ->  Sx127x<Wrapper<Spi<SPI1, Spi1NoRemap,
     //                    (PA5<Alternate<PushPull>>,  PA6<Input<Floating>>, PA7<Alternate<PushPull>>), u8>, Error, 
@@ -244,20 +244,11 @@ use stm32f3xx_hal::{prelude::*,
                     stm32::Peripherals,
                     spi::{Spi, Error},
                     delay::Delay,
-                    gpio::{gpioa::{PA5, PA6, PA7}, AF5,  
-                           gpioa::{PA0, PA1}, Output, PushPull,
-			   gpiob::{PB8, PB9}, Input, Floating},
-                    stm32::SPI1,
                     };
 
     #[cfg(feature = "stm32f3xx")]
-    fn setup() ->  Sx127x<Wrapper<Spi<SPI1, 
-                           (PA5<AF5>,    PA6<AF5>,   PA7<AF5>)>,  Error, 
-                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-                   Infallible,  Delay>,  Error, Infallible, Infallible> {
-    
-    //fn setup() ->  impl Transmit {
-      
+    fn setup() ->  impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, Infallible, Infallible>> {
+          
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
 
@@ -289,7 +280,7 @@ use stm32f3xx_hal::{prelude::*,
     	    gpiob.pb8.into_floating_input(&mut gpiob.moder,   &mut gpiob.pupdr).compat(),    //BusyPin  DIO0 on PB8
             gpiob.pb9.into_floating_input(&mut gpiob.moder,   &mut gpiob.pupdr).compat(),    //ReadyPin DIO1 on PB9
     	    gpioa.pa0.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper).compat(),   //ResetPin      on PA0
-    	    delay,					                            //Delay
+    	    delay.compat(),					                            //Delay
     	    &CONFIG_RADIO,					                    //&Config
     	    ).unwrap();      // should handle error
 
@@ -359,19 +350,13 @@ use stm32f4xx_hal::{prelude::*,
 
 #[cfg(feature = "stm32f7xx")] 
 use stm32f7xx_hal::{prelude::*,  
-                    pac::Peripherals, 
-                    spi::{Spi, Pins, Enabled, ClockDivider, Error,},
+                    device::Peripherals,                    // note non-standard  device vs pac
+                    spi::{Spi, ClockDivider, Error,},
                     delay::Delay,
-                    gpio::{gpioa::{PA0, PA1}, Output, PushPull,
-			   gpiob::{PB8, PB9}, Input, Floating},
-                    pac::SPI1,
                     }; 
 
     #[cfg(feature = "stm32f7xx")]
-    fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>, Enabled<u8>>,  Error, 
-                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-                   Infallible,  Delay>,  Error, Infallible, Infallible> {
-
+    fn setup() -> impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, Infallible, Infallible>>  {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -388,7 +373,7 @@ use stm32f7xx_hal::{prelude::*,
        //   somewhere 8.mhz needs to be set in spi
 
        let spi = Spi::new(p.SPI1, (sck, miso, mosi)).enable::<u8>(
-          &mut rcc.apb2,
+          &mut rcc,
           ClockDivider::DIV32,
           MODE,
           );
@@ -416,19 +401,12 @@ use stm32f7xx_hal::{prelude::*,
 #[cfg(feature = "stm32h7xx")] 
 use stm32h7xx_hal::{prelude::*,  
                     pac::Peripherals, 
-                    spi::{Spi, Enabled, Error},
+                    spi::{Error},
                     delay::Delay,
-                    gpio::{   //gpioa::{PA5, PA6, PA7}, Alternate, AF5,  really!
-                           gpioa::{PA0, PA1}, Output, PushPull,
-                           gpiob::{PB8, PB9}, Input, Floating},
-                    pac::SPI1,
                     }; 
 
     #[cfg(feature = "stm32h7xx")]
-    fn setup() -> Sx127x<Wrapper<Spi<SPI1, Enabled>, Error, 
-                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-                   stm32h7xx_hal::Never,  Delay>,  Error, stm32h7xx_hal::Never> {
-    //fn setup() ->  impl Receive<Error=radio_sx127x::Error<Error, stm32h7xx_hal::Never>> {
+    fn setup() -> impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, stm32h7xx_hal::Never, Infallible>>  {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p      = Peripherals::take().unwrap();
@@ -484,9 +462,10 @@ use stm32l0xx_hal::{prelude::*,
                     }; 
 
     #[cfg(feature = "stm32l0xx")]
-    fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
-                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-                   void::Void,  Delay>,  Error, void::Void> {
+    fn setup() -> impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, Infallible, Infallible>>  {
+    //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
+    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
+    //               void::Void,  Delay>,  Error, void::Void> {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();
@@ -528,23 +507,11 @@ use stm32l0xx_hal::{prelude::*,
 use stm32l1xx_hal::{prelude::*, 
                     stm32::Peripherals, 
                     rcc,   // for ::Config but note name conflict with serial
-                    spi::{Spi, Pins, Error,},
-                    delay::Delay,
-                    gpio::{//gpioa::{PA5, PA6, PA7}, Input,  Floating,   
-                           gpioa::{PA3, PA4}, Output, PushPull,
-			   gpiob::{PB11, PB10}, Input, Floating},
-                    stm32::SPI1,
+                    spi::{Error,},
                     };
 
     #[cfg(feature = "stm32l1xx")]
-    fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
-                   PA4<Output<PushPull>>,  PB11<Input<Floating>>,  PB10<Input<Floating>>,  PA3<Output<PushPull>>, 
-                   Infallible,  Delay>,  Error, Infallible, Infallible> {
-
-       // instead of impl Pins<SPI1>  above could use 
-       // Spi<SPI1, (PA5<Input<Floating>>,  PA6<Input<Floating>>, PA7<Input<Floating>>)>
-       // which also requires  gpio::{gpioa::{PA5, PA6, PA7}, Input,  Floating, 
-       // Possibly should also be able to use  'impl SpiExt<SPI1>' but no luck yet.
+    fn setup() -> impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, Infallible, Infallible>>  {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();

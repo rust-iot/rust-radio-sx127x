@@ -103,7 +103,6 @@ jobs:
       matrix:
         mcu: [stm32f042, stm32f030xc, stm32f103, stm32f100, stm32f101, stm32f303xc,
               stm32f401, stm32f411,   stm32h742, stm32l100, stm32l151, stm32l4x2, ]
-        #mcu: [stm32f042, stm32f103, stm32f411]
         include:
            - mcu:  stm32f042
              hal: "stm32f0xx"
@@ -130,7 +129,7 @@ jobs:
              hal: "stm32f4xx"
              trg: "thumbv7em-none-eabihf"
            - mcu:  stm32h742		 
-             hal: "stm32h7xx"		   #CHECK hal does not build
+             hal: "stm32h7xx"
              trg: "thumbv7em-none-eabihf"
            #- mcu:  stm32l0x2		   # this does not build with release version of hal 
            #  hal: "stm32l0xx"

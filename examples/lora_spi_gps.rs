@@ -294,7 +294,7 @@ use stm32f3xx_hal::{prelude::*,
     	    gpiob.pb8.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr).compat(),    //BusyPin  DIO0 on PB8
             gpiob.pb9.into_floating_input(  &mut gpiob.moder, &mut gpiob.pupdr).compat(),    //ReadyPin DIO1 on PB9
     	    gpioa.pa0.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper).compat(),   //ResetPin      on PA0
-    	    delay,					                            //Delay
+    	    delay.compat(),					                            //Delay
     	    &CONFIG_RADIO,					                    //&Config
     	    ).unwrap();      // should handle error
 
@@ -374,16 +374,16 @@ use stm32f4xx_hal::{prelude::*,
 
 #[cfg(feature = "stm32f7xx")] 
 use stm32f7xx_hal::{prelude::*,  
-                    pac::Peripherals, 
+                    device::Peripherals,                    // note non-standard  device vs pac
                     serial::{Config, Serial, Tx, Rx, Oversampling, },
-		    pac::{USART2}, 
+		    device::{USART2},                       // note non-standard  device vs pac
                     spi::{Spi, ClockDivider, Error, },
                     delay::Delay,
                     }; 
 
     #[cfg(feature = "stm32f7xx")]
     fn setup() ->  (Tx<USART2>, Rx<USART2>,
-                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible>, Infallible> ) {
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallible>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -399,7 +399,7 @@ use stm32f7xx_hal::{prelude::*,
        //   somewhere 8.mhz needs to be set in spi
 
        let spi = Spi::new(p.SPI1, (sck, miso, mosi)).enable::<u8>(
-          &mut rcc.apb2,
+          &mut rcc,
           ClockDivider::DIV32,
           MODE,
           );
@@ -417,7 +417,6 @@ use stm32f7xx_hal::{prelude::*,
            Config {
                 baud_rate: 9600.bps(),
                 oversampling: Oversampling::By16,
-                character_match: None,
                 },
            ).split();
 
@@ -426,14 +425,14 @@ use stm32f7xx_hal::{prelude::*,
        // Create lora radio instance 
 
        let lora = Sx127x::spi(
-    	    spi,					             //Spi
-    	    gpioa.pa1.into_push_pull_output(),                       //CsPin         on PA1
-    	    gpiob.pb8.into_floating_input(),                         //BusyPin  DIO0 on PB8
-            gpiob.pb9.into_floating_input(),                         //ReadyPin DIO1 on PB9
-    	    gpioa.pa0.into_push_pull_output(),                       //ResetPin      on PA0
-    	    delay,					             //Delay
-    	    &CONFIG_RADIO,					     //&Config
-    	    ).unwrap();      // should handle error
+            spi.compat(),					 //Spi
+            gpioa.pa1.into_push_pull_output().compat(), 	 //CsPin         on PA1
+            gpiob.pb8.into_floating_input().compat(),		 //BusyPin  DIO0 on PB8
+            gpiob.pb9.into_floating_input().compat(),            //ReadyPin DIO1 on PB9
+            gpioa.pa0.into_push_pull_output().compat(), 	 //ResetPin      on PA0
+            delay.compat(),					 //Delay
+            &CONFIG_RADIO,					 //&Config
+            ).unwrap();      // should handle error
        
        (tx, rx,  lora)
        }
@@ -450,7 +449,7 @@ use stm32h7xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32h7xx")]
     fn setup() ->  (Tx<USART2>, Rx<USART2>,
-                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, stm32h7xx_hal::Never>> ) {
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, stm32h7xx_hal::Never, Infallible>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p      = Peripherals::take().unwrap();
@@ -569,11 +568,6 @@ use stm32l1xx_hal::{prelude::*,
     #[cfg(feature = "stm32l1xx")]
     fn setup() ->  (Tx<USART1>, Rx<USART1>,
                     impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallible>> ) {
-
-       // instead of impl Pins<SPI1>  above could use 
-       // Spi<SPI1, (PA5<Input<Floating>>,  PA6<Input<Floating>>, PA7<Input<Floating>>)>
-       // which also requires  gpio::{gpioa::{PA5, PA6, PA7}, Input,  Floating, 
-       // Possibly should also be able to use  'impl SpiExt<SPI1>' but no luck yet.
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();

@@ -35,12 +35,12 @@
 //!    export HAL=stm32f4xx MCU=stm32f401   TARGET=thumbv7em-none-eabihf PROC=stm32f4x  # blackpill-stm32f401 Cortex-M4
 //!    export HAL=stm32f4xx MCU=stm32f411   TARGET=thumbv7em-none-eabihf PROC=stm32f4x  # blackpill-stm32f411 Cortex-M4
 //!    export HAL=stm32f4xx MCU=stm32f411   TARGET=thumbv7em-none-eabihf PROC=stm32f4x  # nucleo-64	      Cortex-M4
-//!    hal NOT compiling as of (Feb 2021) export HAL=stm32f7xx MCU=stm32f722 TARGET=thumbv7em-none-eabihf #none-stm32f722 Cortex-M7
+//!    export HAL=stm32f7xx MCU=stm32f722   TARGET=thumbv7em-none-eabihf #none-stm32f722 Cortex-M7
 //!    export HAL=stm32h7xx MCU=stm32h742   TARGET=thumbv7em-none-eabihf                # none-stm32h742      Cortex-M7
 //!    export HAL=stm32l0xx MCU=stm32l0x2   TARGET=thumbv6m-none-eabi	 PROC=stm32l1   # none-stm32l0x2      Cortex-M0
 //!    export HAL=stm32l1xx MCU=stm32l100   TARGET=thumbv7m-none-eabi	 PROC=stm32l1   # discovery-stm32l100 Cortex-M3
 //!    export HAL=stm32l1xx MCU=stm32l151   TARGET=thumbv7m-none-eabi	 PROC=stm32l1   # heltec-lora-node151 Cortex-M3
-//!    NOT compiling as of (Feb 2021) export HAL=stm32l4xx MCU=stm32l4x2   TARGET=thumbv7em-none-eabi # none-stm32l4x1      Cortex-M4
+//!    export HAL=stm32l4xx MCU=stm32l4x2   TARGET=thumbv7em-none-eabi # none-stm32l4x1      Cortex-M4
 //!  
 //!  Depending on the MCU connection to the computer, in the  openocd command use
 //!    export INTERFACE=stlink-v2  
@@ -432,7 +432,7 @@ use stm32f4xx_hal::{prelude::*,
 
 #[cfg(feature = "stm32f7xx")] 
 use stm32f7xx_hal::{prelude::*,  
-                    pac::Peripherals, 
+                    device::Peripherals,             // note non-standard  device vs pac
                     spi::{Spi, ClockDivider, Error,},
                     delay::Delay,
                     }; 
@@ -460,7 +460,7 @@ use stm32f7xx_hal::{prelude::*,
        //   somewhere 8.mhz needs to be set in spi
 
        let spi = Spi::new(p.SPI1, (sck, miso, mosi)).enable::<u8>(
-          &mut rcc.apb2,
+          &mut rcc,
           ClockDivider::DIV32,
           MODE,
           );
@@ -493,7 +493,7 @@ use stm32h7xx_hal::{prelude::*,
                    }; 
 
     #[cfg(feature = "stm32h7xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, stm32h7xx_hal::Never>> {
+    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, stm32h7xx_hal::Never, Infallible>> {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p      = Peripherals::take().unwrap();
@@ -523,14 +523,14 @@ use stm32h7xx_hal::{prelude::*,
        // Create lora radio instance 
 
        let lora = Sx127x::spi(
-    	    spi,				                     //Spi
-    	    gpioa.pa1.into_push_pull_output(),                       //CsPin         on PA1
-    	    gpiob.pb8.into_floating_input(),                         //BusyPin  DIO0 on PB8
-            gpiob.pb9.into_floating_input(),                         //ReadyPin DIO1 on PB9
-    	    gpioa.pa0.into_push_pull_output(),                       //ResetPin      on PA0
-    	    delay,					             //Delay
-    	    &CONFIG_RADIO,					     //&Config
-    	    ).unwrap();      // should handle error
+                spi.compat(),                                      //Spi
+                gpioa.pa1.into_push_pull_output().compat(),        //CsPin         on PA1
+                gpiob.pb8.into_floating_input().compat(),          //BusyPin  DIO0 on PB8
+            gpiob.pb9.into_floating_input().compat(),              //ReadyPin DIO1 on PB9
+                gpioa.pa0.into_push_pull_output().compat(),        //ResetPin      on PA0
+                delay.compat(),                                    //Delay
+                &CONFIG_RADIO,                                     //&Config
+                ).unwrap();      // should handle error
 
        lora
        }
@@ -548,7 +548,8 @@ use stm32l0xx_hal::{prelude::*,
     //use void::Void;     release version of this needs std. And it should not be in return value anyway
 
     #[cfg(feature = "stm32l0xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Void>> {
+    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Void, Infallible>> {
+    //fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Void>> {
 
     //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
     //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
