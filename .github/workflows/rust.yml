@@ -131,9 +131,9 @@ jobs:
            - mcu:  stm32h742		 
              hal: "stm32h7xx"
              trg: "thumbv7em-none-eabihf"
-           #- mcu:  stm32l0x2		   # this does not build with release version of hal 
-           #  hal: "stm32l0xx"
-           #  trg: "thumbv6m-none-eabi"
+           - mcu:  stm32l0x2		   # this may not build with release version of hal 
+             hal: "stm32l0xx"
+             trg: "thumbv6m-none-eabi"
            - mcu:  stm32l100
              hal: "stm32l1xx"
              trg: "thumbv7m-none-eabi"

@@ -39,28 +39,9 @@ use embedded_hal::{blocking::delay::DelayMs,
 use embedded_hal_compat::IntoCompat;
 use embedded_hal_compat::eh1_0::blocking::delay::{DelayMs as _};
 
-// To define constant MODE it should be possible to use next in place of following hal specific versions,
-// but embedded_hal_compat isn't covering it yet.
+// MODE needs the old version as it is passed to the device hal crates 
 //use embedded_hal::{spi::{Mode, Phase, Polarity}, };
-
-#[cfg(feature = "stm32f0xx")]  //  eg stm32f030xc
-use stm32f0xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32f1xx")]  //  eg blue pill stm32f103
-use stm32f1xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32f3xx")]  //  eg Discovery-stm32f303
-use stm32f3xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32f4xx")] // eg Nucleo-64 stm32f411, blackpill stm32f411, blackpill stm32f401
-use stm32f4xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32f7xx")] 
-use stm32f7xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32h7xx")] 
-use stm32h7xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32l0xx")] 
-use stm32l0xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32l1xx") ] // eg  Discovery kit stm32l100 and Heltec lora_node STM32L151CCU6
-use stm32l1xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32l4xx")]
-use stm32l4xx_hal::{spi::{Mode,Phase, Polarity}}; 
+use old_e_h::{spi::{Mode,Phase, Polarity}}; 
 
 //use asm_delay::{ AsmDelay, bitrate, };
 
@@ -509,9 +490,12 @@ use stm32l0xx_hal::{prelude::*,
                     spi::{ Error, },
                     }; 
 
+    #[cfg(feature = "stm32l0xx")] 
+    use void::Void;     
+
     #[cfg(feature = "stm32l0xx")]
     fn setup() ->  (Tx<USART2>, Rx<USART2>,
-                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, void::Void>> ) {
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Void, Infallible>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();

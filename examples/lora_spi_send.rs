@@ -35,12 +35,12 @@
 //!    export HAL=stm32f4xx MCU=stm32f401   TARGET=thumbv7em-none-eabihf PROC=stm32f4x  # blackpill-stm32f401 Cortex-M4
 //!    export HAL=stm32f4xx MCU=stm32f411   TARGET=thumbv7em-none-eabihf PROC=stm32f4x  # blackpill-stm32f411 Cortex-M4
 //!    export HAL=stm32f4xx MCU=stm32f411   TARGET=thumbv7em-none-eabihf PROC=stm32f4x  # nucleo-64	      Cortex-M4
-//!    export HAL=stm32f7xx MCU=stm32f722   TARGET=thumbv7em-none-eabihf #none-stm32f722 Cortex-M7
-//!    export HAL=stm32h7xx MCU=stm32h742   TARGET=thumbv7em-none-eabihf                # none-stm32h742      Cortex-M7
-//!    export HAL=stm32l0xx MCU=stm32l0x2   TARGET=thumbv6m-none-eabi	 PROC=stm32l1   # none-stm32l0x2      Cortex-M0
+//!    export HAL=stm32f7xx MCU=stm32f722   TARGET=thumbv7em-none-eabihf PROC=stm32f7x  # none-stm32f722      Cortex-M7
+//!    export HAL=stm32h7xx MCU=stm32h742   TARGET=thumbv7em-none-eabihf PROC=          # none-stm32h742      Cortex-M7
+//!    export HAL=stm32l0xx MCU=stm32l0x2   TARGET=thumbv6m-none-eabi	 PROC=stm32l0   # none-stm32l0x2      Cortex-M0
 //!    export HAL=stm32l1xx MCU=stm32l100   TARGET=thumbv7m-none-eabi	 PROC=stm32l1   # discovery-stm32l100 Cortex-M3
 //!    export HAL=stm32l1xx MCU=stm32l151   TARGET=thumbv7m-none-eabi	 PROC=stm32l1   # heltec-lora-node151 Cortex-M3
-//!    export HAL=stm32l4xx MCU=stm32l4x2   TARGET=thumbv7em-none-eabi # none-stm32l4x1      Cortex-M4
+//!    export HAL=stm32l4xx MCU=stm32l4x2   TARGET=thumbv7em-none-eabi	 PROC=stm32l4x  # none-stm32l4x1      Cortex-M4
 //!  
 //!  Depending on the MCU connection to the computer, in the  openocd command use
 //!    export INTERFACE=stlink-v2  
@@ -90,28 +90,9 @@ use embedded_hal::{blocking::delay::DelayMs,
 use embedded_hal_compat::IntoCompat;
 use embedded_hal_compat::eh1_0::blocking::delay::{DelayMs as _};
 
-// To define constant MODE it should be possible to use next in place of following hal specific versions,
-// but embedded_hal_compat isn't covering it yet.
+// MODE needs the old version as it is passed to the device hal crates 
 //use embedded_hal::{spi::{Mode, Phase, Polarity}, };
-
-#[cfg(feature = "stm32f0xx")]  //  eg stm32f030xc
-use stm32f0xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32f1xx")]  //  eg blue pill stm32f103
-use stm32f1xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32f3xx")]  //  eg Discovery-stm32f303
-use stm32f3xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32f4xx")] // eg Nucleo-64 stm32f411, blackpill stm32f411, blackpill stm32f401
-use stm32f4xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32f7xx")] 
-use stm32f7xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32h7xx")] 
-use stm32h7xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32l0xx")] 
-use stm32l0xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32l1xx") ] // eg  Discovery kit stm32l100 and Heltec lora_node STM32L151CCU6
-use stm32l1xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32l4xx")]
-use stm32l4xx_hal::{spi::{Mode,Phase, Polarity}}; 
+use old_e_h::{spi::{Mode,Phase, Polarity}}; 
 
 
 //use asm_delay::{ AsmDelay, bitrate, };
@@ -225,34 +206,6 @@ use stm32f1xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32f1xx")]
     fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallible>> {
-    
-    //fn setup() ->  Sx127x<Wrapper<Spi<SPI1, Spi1NoRemap,
-    //                    (PA5<Alternate<PushPull>>,  PA6<Input<Floating>>, PA7<Alternate<PushPull>>), u8>, Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               Infallible,  Delay>, Error, Infallible, Infallible> {
-    // this needs use
-    //                spi::{Spi1NoRemap,},
-    //                gpio::{Input, Output, PushPull, Floating, Alternate,
-    //                       gpioa::{PA0, PA1, PA5, PA6, PA7},
-    //                       gpiob::{PB8, PB9},
-    //                       },
-
-    // return struct is
-    //    `radio_sx127x::Sx127x<
-    //        driver_pal::wrapper::Wrapper<
-    //            Compat<stm32f1xx_hal::spi::Spi<stm32f1xx_hal::pac::SPI1, Spi1NoRemap,
-    //                (PA5<Alternate<PushPull>>, PA6<Input<Floating>>, PA7<Alternate<PushPull>>),   u8>>, 
-    //            stm32f1xx_hal::spi::Error, 
-    //            Compat<PA1<Output<PushPull>>>, 
-    //            Compat<PB8<Input<Floating>>>, 
-    //            Compat<PB9<Input<Floating>>>, 
-    //            Compat<PA0<Output<PushPull>>>, 
-    //            Infallible, 
-    //            Compat<stm32f1xx_hal::delay::Delay>, 
-    //            Infallible>, 
-    //        stm32f1xx_hal::spi::Error, 
-    //        Infallible, 
-    //        Infallible>`
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -305,11 +258,6 @@ use stm32f3xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32f3xx")]
     fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallible>> {
-
-    //fn setup() ->  Sx127x<Wrapper<Spi<SPI1, 
-    //                       (PA5<AF5>,    PA6<AF5>,   PA7<AF5>)>,  Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               Infallible,  Delay>,  Error, Infallible> {
           
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -355,29 +303,9 @@ use stm32f4xx_hal::{prelude::*,
                     stm32::Peripherals, 
                     spi::{Spi, Error},
                     delay::Delay,
-                    //  next would be needed to define exact type 
-		    //gpio::{gpioa::{PA5, PA6, PA7}, Alternate, AF5,  
-                    //       gpioa::{PA0, PA1}, Output, PushPull,
-		    //       gpiob::{PB8, PB9}, Input, Floating},
                     time::MegaHertz,
-                    //pac::SPI1,
                     }; 
 
-// If the type for the lora object is needed somewhere other than just in the setup() return type then it
-// may be better to explicitly define it as follows. This also require commented lines in use above.
-//
-//    use embedded_spi::wrapper::Wrapper;
-//
-//    type LoraType = Sx127x<Wrapper<Spi<SPI1, 
-//                           (PA5<Alternate<AF5>>,    PA6<Alternate<AF5>>,   PA7<Alternate<AF5>>)>,  Error, 
-//                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-//                   Infallible,  Delay>,  Error, Infallible>;
-// then
-//    fn setup() ->  LoraType {
-
-//If access to delay in the returned object is not needed ( eg. lora.delay_ms(5000u32); ) then 
-//    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible>> {
-// works.
 
     #[cfg(feature = "stm32f4xx")]
     fn setup() ->  impl  DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallible>> {
@@ -439,11 +367,6 @@ use stm32f7xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32f7xx")]
     fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Infallible, Infallible>> {
-    
-    //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>, Enabled<u8>>,  Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               Infallible,  Delay>,  Error, Infallible, Infallible> {
-
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -544,16 +467,11 @@ use stm32l0xx_hal::{prelude::*,
                     spi::{Error, },
                     }; 
 
-    //#[cfg(feature = "stm32l0xx")] 
-    //use void::Void;     release version of this needs std. And it should not be in return value anyway
+    #[cfg(feature = "stm32l0xx")] 
+    use void::Void;     
 
     #[cfg(feature = "stm32l0xx")]
     fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Void, Infallible>> {
-    //fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Void>> {
-
-    //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               void::Void,  Delay>,  Error, void::Void> {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();

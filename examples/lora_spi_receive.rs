@@ -39,28 +39,9 @@ use embedded_hal::{blocking::delay::DelayMs,
 use embedded_hal_compat::IntoCompat;
 use embedded_hal_compat::eh1_0::blocking::delay::{DelayMs as _};
 
-// To define constant MODE it should be possible to use next in place of following hal specific versions,
-// but embedded_hal_compat isn't covering it yet.
+// MODE needs the old version as it is passed to the device hal crates 
 //use embedded_hal::{spi::{Mode, Phase, Polarity}, };
-
-#[cfg(feature = "stm32f0xx")]  //  eg stm32f030xc
-use stm32f0xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32f1xx")]  //  eg blue pill stm32f103
-use stm32f1xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32f3xx")]  //  eg Discovery-stm32f303
-use stm32f3xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32f4xx")] // eg Nucleo-64 stm32f411, blackpill stm32f411, blackpill stm32f401
-use stm32f4xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32f7xx")] 
-use stm32f7xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32h7xx")] 
-use stm32h7xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32l0xx")] 
-use stm32l0xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32l1xx") ] // eg  Discovery kit stm32l100 and Heltec lora_node STM32L151CCU6
-use stm32l1xx_hal::{spi::{Mode,Phase, Polarity}}; 
-#[cfg(feature = "stm32l4xx")]
-use stm32l4xx_hal::{spi::{Mode,Phase, Polarity}}; 
+use old_e_h::{spi::{Mode,Phase, Polarity}}; 
 
 //use asm_delay::{ AsmDelay, bitrate, };
 
@@ -124,20 +105,13 @@ const CONFIG_RADIO: radio_sx127x::device::Config = radio_sx127x::device::Config 
 #[cfg(feature = "stm32f0xx")]  //  eg stm32f030xc
 use stm32f0xx_hal::{prelude::*,   
                     pac::Peripherals, 
-                    spi::{Spi, EightBit, Error},
+                    spi::{Spi, Error},
                     delay::Delay,
-                    gpio::{gpioa::{PA5, PA6, PA7}, Alternate, Input, AF0,
-                           gpioa::{PA0, PA1}, Output, PushPull,
-                           gpiob::{PB8, PB9}, Floating },
-                    pac::SPI1,
                     }; 
 
 
     #[cfg(feature = "stm32f0xx")]
-    fn setup() ->   Sx127x<Wrapper<Spi<SPI1, 
-                        PA5<Alternate<AF0>>,  PA6<Alternate<AF0>>, PA7<Alternate<AF0>>,  EightBit>, Error, 
-                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-                   Infallible,  Delay>, Error, Infallible, Infallible> {
+    fn setup() ->  impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, Infallible, Infallible>> {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let mut p  = Peripherals::take().unwrap();
@@ -184,18 +158,6 @@ use stm32f1xx_hal::{prelude::*,
 
     #[cfg(feature = "stm32f1xx")]
     fn setup() ->  impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, Infallible, Infallible>> {
-
-    //fn setup() ->  Sx127x<Wrapper<Spi<SPI1, Spi1NoRemap,
-    //                    (PA5<Alternate<PushPull>>,  PA6<Input<Floating>>, PA7<Alternate<PushPull>>), u8>, Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               Infallible,  Delay>, Error, Infallible, Infallible> {
-    // this needs use
-    //                spi::{Spi1NoRemap,},
-    //                gpio::{Input, Output, PushPull, Floating, Alternate,
-    //                       gpioa::{PA0, PA1, PA5, PA6, PA7},
-    //                       gpiob::{PB8, PB9},
-    //                       },
-    //                device::SPI1,
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p  = Peripherals::take().unwrap();
@@ -461,8 +423,11 @@ use stm32l0xx_hal::{prelude::*,
                     pac::SPI1,
                     }; 
 
+    #[cfg(feature = "stm32l0xx")] 
+    use void::Void;     
+
     #[cfg(feature = "stm32l0xx")]
-    fn setup() -> impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, Infallible, Infallible>>  {
+    fn setup() -> impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, Void, Infallible>>  {
     //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
     //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
     //               void::Void,  Delay>,  Error, void::Void> {
@@ -555,18 +520,10 @@ use stm32l4xx_hal::{prelude::*,
                     pac::Peripherals, 
                     spi::{Spi, Error,},
                     delay::Delay,
-                    gpio::{gpioa::{PA5, PA6, PA7}, Alternate, AF5, Input, Floating, 
-                           gpioa::{PA0, PA1}, Output, PushPull,
-			   gpiob::{PB8, PB9},},
-                    pac::SPI1,
                     }; 
 
     #[cfg(feature = "stm32l4xx")]
-    fn setup() -> Sx127x<Wrapper<Spi<SPI1, (PA5<Alternate<AF5, Input<Floating>>>, 
-		                            PA6<Alternate<AF5, Input<Floating>>>, 
-					    PA7<Alternate<AF5, Input<Floating>>> )>, Error, 
-                   PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-                   Infallible,  Delay>,  Error, Infallible, Infallible> {
+    fn setup() -> impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, Infallible, Infallible>>  {
 
        let cp        = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();

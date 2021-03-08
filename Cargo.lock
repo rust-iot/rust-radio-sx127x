@@ -162,15 +162,15 @@ dependencies = [
  "aligned 0.3.4",
  "bare-metal 0.2.5",
  "bitfield",
- "cortex-m 0.7.1",
+ "cortex-m 0.7.2",
  "volatile-register",
 ]
 
 [[package]]
 name = "cortex-m"
-version = "0.7.1"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0b756a8bffc56025de45218a48ff9b801180440c0ee49a722b32d49dcebc771"
+checksum = "643a210c1bdc23d0db511e2a576082f4ff4dcae9d0c37f50b431b8f8439d6d6b"
 dependencies = [
  "bare-metal 0.2.5",
  "bitfield",
@@ -205,7 +205,7 @@ version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bffa6c1454368a6aa4811ae60964c38e6996d397ff8095a8b9211b1c1f749bc"
 dependencies = [
- "cortex-m 0.7.1",
+ "cortex-m 0.7.2",
 ]
 
 [[package]]
@@ -477,7 +477,7 @@ version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d55dedd501dfd02514646e0af4d7016ce36bc12ae177ef52056989966a1eec"
 dependencies = [
- "cortex-m 0.7.1",
+ "cortex-m 0.7.2",
  "cortex-m-semihosting",
 ]
 
@@ -555,6 +555,7 @@ dependencies = [
  "cortex-m-rt",
  "cortex-m-semihosting",
  "driver-pal",
+ "embedded-hal 0.2.4",
  "embedded-hal 1.0.0-alpha.4",
  "embedded-hal-compat",
  "embedded-spi",
@@ -579,6 +580,7 @@ dependencies = [
  "stm32l1xx-hal",
  "stm32l4xx-hal",
  "structopt",
+ "void",
 ]
 
 [[package]]
@@ -992,9 +994,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.61"
+version = "1.0.62"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed22b90a0e734a23a7610f4283ac9e5acfb96cbb30dfefa540d66f866f1c09c5"
+checksum = "123a78a3596b24fee53a6464ce52d8ecbf62241e6294c7e7fe12086cd161f512"
 dependencies = [
  "proc-macro2",
  "quote",
