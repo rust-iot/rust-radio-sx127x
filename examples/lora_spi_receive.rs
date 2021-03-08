@@ -57,10 +57,7 @@ use radio_sx127x::{
 };
 
 // trait needs to be in scope to find  methods start_transmit and check_transmit.
-//use radio::{Receive, Transmit, Radio};
-//use radio::{Receive, ReceiveInfo};
 use radio::Receive;
-//use embedded_spi::wrapper::Wrapper;
 
 // lora and radio parameters
 
@@ -284,8 +281,8 @@ fn setup(
     lora
 }
 
-#[cfg(feature = "stm32f4xx")]
 // eg Nucleo-64 stm32f411, blackpill stm32f411, blackpill stm32f401
+#[cfg(feature = "stm32f4xx")]
 use stm32f4xx_hal::{
     delay::Delay,
     prelude::*,
@@ -322,10 +319,6 @@ fn setup(
     let delay = Delay::new(cp.SYST, clocks);
 
     // Create lora radio instance
-
-    // open_drain_output is really input and output. BusyPin is just input, but I think this should work
-    //	    gpiob.pb8.into_alternate_open_drain(&mut gpiob.crh),
-    // however, gives trait bound  ... InputPin` is not satisfied
 
     let lora = Sx127x::spi(
         spi.compat(),                               //Spi
