@@ -467,12 +467,12 @@ use stm32h7xx_hal::{prelude::*,
        // Create lora radio instance 
 
        let lora = Sx127x::spi(
-    	    spi.compat(),				                     //Spi
-    	    gpioa.pa1.into_push_pull_output().compat(),                       //CsPin         on PA1
-    	    gpiob.pb8.into_floating_input().compat(),                         //BusyPin  DIO0 on PB8
-            gpiob.pb9.into_floating_input().compat(),                         //ReadyPin DIO1 on PB9
-    	    gpioa.pa0.into_push_pull_output().compat(),                       //ResetPin      on PA0
-    	    delay.compat(),					             //Delay
+    	    spi.compat(),				             //Spi
+    	    gpioa.pa1.into_push_pull_output().compat(),              //CsPin         on PA1
+    	    gpiob.pb8.into_floating_input().compat(),                //BusyPin  DIO0 on PB8
+            gpiob.pb9.into_floating_input().compat(),                //ReadyPin DIO1 on PB9
+    	    gpioa.pa0.into_push_pull_output().compat(),              //ResetPin      on PA0
+    	    delay.compat(),					     //Delay
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
 
@@ -480,7 +480,6 @@ use stm32h7xx_hal::{prelude::*,
        }
 
 
-//   SKIP TESTING THIS, IT DOES NOT BUILD WITH RELEASE VERSION OF HAL
 #[cfg(feature = "stm32l0xx")] 
 use stm32l0xx_hal::{prelude::*,  
                     pac::Peripherals, 
@@ -491,11 +490,11 @@ use stm32l0xx_hal::{prelude::*,
                     }; 
 
     #[cfg(feature = "stm32l0xx")] 
-    use void::Void;     
+    use void;     
 
     #[cfg(feature = "stm32l0xx")]
     fn setup() ->  (Tx<USART2>, Rx<USART2>,
-                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Void, Infallible>> ) {
+                    impl DelayMs<u32> + Transmit<Error=sx127xError<Error, void::Void, Infallible>> ) {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();
@@ -526,12 +525,12 @@ use stm32l0xx_hal::{prelude::*,
        // Create lora radio instance 
 
        let lora = Sx127x::spi(
-    	    spi.compat(),				                     //Spi
-    	    gpioa.pa1.into_push_pull_output().compat(),                       //CsPin         on PA1
-    	    gpiob.pb8.into_floating_input().compat(),                         //BusyPin  DIO0 on PB8
-            gpiob.pb9.into_floating_input().compat(),                         //ReadyPin DIO1 on PB9
-    	    gpioa.pa0.into_push_pull_output().compat(),                       //ResetPin      on PA0
-    	    delay.compat(),					             //Delay
+    	    spi.compat(),				             //Spi
+    	    gpioa.pa1.into_push_pull_output().compat(),              //CsPin         on PA1
+    	    gpiob.pb8.into_floating_input().compat(),                //BusyPin  DIO0 on PB8
+            gpiob.pb9.into_floating_input().compat(),                //ReadyPin DIO1 on PB9
+    	    gpioa.pa0.into_push_pull_output().compat(),              //ResetPin      on PA0
+    	    delay.compat(),					     //Delay
     	    &CONFIG_RADIO,					     //&Config
     	    ).unwrap();      // should handle error
        
@@ -750,7 +749,12 @@ fn main() -> !{
 	      buffer.clear();
 	      buf2.clear();
      	      good = false;
-	      lora.try_delay_ms(5000u32);
+	      match lora.try_delay_ms(5000u32) {
+		     Ok(b)      => b,  // b is ()
+		     Err(_err)  => {hprintln!("Error returned from lora.try_delay_ms().").unwrap();
+		                    panic!("should reset in release mode."); 
+				    },
+		     };
      	      };
      	   };
      	}

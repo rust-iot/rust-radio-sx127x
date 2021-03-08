@@ -459,7 +459,6 @@ use stm32h7xx_hal::{prelude::*,
        }
 
 
-//   SKIP TESTING THIS, IT DOES NOT BUILD WITH RELEASE VERSION OF HAL
 #[cfg(feature = "stm32l0xx")] 
 use stm32l0xx_hal::{prelude::*,  
                     pac::Peripherals, 
@@ -468,10 +467,10 @@ use stm32l0xx_hal::{prelude::*,
                     }; 
 
     #[cfg(feature = "stm32l0xx")] 
-    use void::Void;     
+    use void;     
 
     #[cfg(feature = "stm32l0xx")]
-    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, Void, Infallible>> {
+    fn setup() ->  impl DelayMs<u32> + Transmit<Error=sx127xError<Error, void::Void, Infallible>> {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();
@@ -656,6 +655,11 @@ fn main() -> !{
            Err(_err) => hprintln!("Error in lora.check_transmit(). Should return True or False.").unwrap(),
            };
        
-       lora.try_delay_ms(5000u32);
+       match lora.try_delay_ms(5000u32) {
+		     Ok(b)      => b,  // b is ()
+		     Err(_err)  => {hprintln!("Error returned from lora.try_delay_ms().").unwrap();
+		                    panic!("should reset in release mode."); 
+				    },
+		     };
        };
 }

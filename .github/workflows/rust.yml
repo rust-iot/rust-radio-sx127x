@@ -102,7 +102,7 @@ jobs:
     strategy:
       matrix:
         mcu: [stm32f042, stm32f030xc, stm32f103, stm32f100, stm32f101, stm32f303xc,
-              stm32f401, stm32f411,   stm32h742, stm32l100, stm32l151, stm32l4x2, ]
+              stm32f401, stm32f411,   stm32h742, stm32l0x2, stm32l100, stm32l151, stm32l4x2, ]
         include:
            - mcu:  stm32f042
              hal: "stm32f0xx"
@@ -131,7 +131,7 @@ jobs:
            - mcu:  stm32h742		 
              hal: "stm32h7xx"
              trg: "thumbv7em-none-eabihf"
-           - mcu:  stm32l0x2		   # this may not build with release version of hal 
+           - mcu:  stm32l0x2
              hal: "stm32l0xx"
              trg: "thumbv6m-none-eabi"
            - mcu:  stm32l100

@@ -411,26 +411,18 @@ use stm32h7xx_hal::{prelude::*,
        }
 
 
-//   SKIP TESTING THIS, IT DOES NOT BUILD WITH RELEASE VERSION OF HAL
 #[cfg(feature = "stm32l0xx")] 
 use stm32l0xx_hal::{prelude::*,  
                     pac::Peripherals, 
                     rcc,   // for ::Config but note name conflict with serial
-                    spi::{Spi, Pins, Error, },
-                    delay::Delay,
-                    gpio::{gpioa::{PA0, PA1}, Output, PushPull,
-			   gpiob::{PB8, PB9}, Input, Floating},
-                    pac::SPI1,
+                    spi::{ Error, },
                     }; 
 
     #[cfg(feature = "stm32l0xx")] 
-    use void::Void;     
+    use void;     
 
     #[cfg(feature = "stm32l0xx")]
-    fn setup() -> impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, Void, Infallible>>  {
-    //fn setup() -> Sx127x<Wrapper<Spi<SPI1,impl Pins<SPI1>>, Error, 
-    //               PA1<Output<PushPull>>,  PB8<Input<Floating>>,  PB9<Input<Floating>>,  PA0<Output<PushPull>>, 
-    //               void::Void,  Delay>,  Error, void::Void> {
+    fn setup() -> impl DelayMs<u32> + Receive<Info=PacketInfo, Error=sx127xError<Error, void::Void, Infallible>>  {
 
        let cp = cortex_m::Peripherals::take().unwrap();
        let p         = Peripherals::take().unwrap();
@@ -605,7 +597,12 @@ fn main() -> !{
 	    Err(err)     =>  hprintln!("poll error {:?} ", err).unwrap(),
             };
 
-       lora.try_delay_ms(100u32);
+       match lora.try_delay_ms(100u32) {
+		     Ok(b)      => b,  // b is ()
+		     Err(_err)  => {hprintln!("Error returned from lora.try_delay_ms().").unwrap();
+		                    panic!("should reset in release mode."); 
+				    },
+		     };
        };
 
 }
