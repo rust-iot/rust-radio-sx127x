@@ -30,7 +30,10 @@ Install the utility with one of the following methods:
 
 The radio-sx127x crate can be used as an interface library for the sx127x radio on other
 embedded devices.  To enable `no_std` usage, add `default-features = false` to your
-`Cargo.toml`
+`Cargo.toml`.
+See examples `lora_spi_send`,  `lora_spi_receive`, and `lora_spi_gps`. 
+Comments in the `file examples/lora_spi_send.rs` show how to build and run the examples
+on several different MCUs.
 
 
 ## Useful Resources
