@@ -66,8 +66,8 @@ stm32f1xx-hal = {version = "^0.7.0", optional = true}
 stm32f3xx-hal = {version = "^0.6.1", optional = true} 
 stm32f4xx-hal = {version = "^0.8.3", optional = true} 
 stm32f7xx-hal = {version = "^0.2.0", optional = true} 
-stm32h7xx-hal = {version = "^0.8.0", optional = true} 
-stm32l0xx-hal = {version = "^0.6.2", optional = true} 
+stm32h7xx-hal = {version = "^0.9.0", optional = true} 
+stm32l0xx-hal = {version = "^0.7.0", optional = true} 
 stm32l1xx-hal = {version = "^0.1.0", optional = true,  default-features = false} 
 stm32l4xx-hal = {version = "^0.6.0", optional = true}
 
