@@ -10,7 +10,7 @@
 //!      - no-default-features is because some default-features require std.
 //!
 //!  The examples can be compiled with:
-//!    cargo build  --no-default-features  --target $TARGET --features=$HAL,$MCU  --example xxx
+//!    cargo build --no-default-features --target $TARGET --features=$HAL,$MCU,compat --example xxx [ --release ]
 //!
 //!  Before running, check  FREQUENCY below to be sure you have a channel setting appropriate for
 //!  your country, hardware and any testing sender/receiver on the other end of the communication.
@@ -18,7 +18,7 @@
 //!  To link, loaded and run using gdb and openocd (with INTERFACE and PROC set as below):
 //!  	openocd -f interface/$INTERFACE.cfg -f target/$PROC.cfg
 //!  and in another window (with TARGET, HAL, and MCU set as below):
-//!  	cargo  run  --no-default-features  --target $TARGET --features $HAL,$MCU    --example xxx   [ --release ]
+//!    cargo  run  --no-default-features --target $TARGET --features $HAL,$MCU,compat --example xxx [ --release ]
 //!
 //!  If --release is omitted then some MCUs do not have sufficient memory and loading results in
 //!       '.rodata will not fit in region FLASH '
@@ -88,7 +88,6 @@ use embedded_hal::blocking::delay::DelayMs;
 // When passing the older hal crate objects to the newer rust-radio-sx127x methods
 // the objects are appended with .compat().
 
-use embedded_hal_compat::eh1_0::blocking::delay::DelayMs as _;
 use embedded_hal_compat::IntoCompat;
 
 // MODE needs the old version as it is passed to the device hal crates
@@ -211,15 +210,15 @@ fn setup() -> impl DelayMs<u32> + Transmit<Error = sx127xError<Error, Infallible
 #[cfg(feature = "stm32f1xx")] //  eg blue pill stm32f103
 use stm32f1xx_hal::{
     delay::Delay,
-    pac::Peripherals,
+    pac::{CorePeripherals, Peripherals},
     prelude::*,
     spi::{Error, Spi},
 };
 
 #[cfg(feature = "stm32f1xx")]
 fn setup() -> impl DelayMs<u32> + Transmit<Error = sx127xError<Error, Infallible, Infallible>> {
-    let cp = cortex_m::Peripherals::take().unwrap();
-    let p = Peripherals::take().unwrap();
+    let cp = CorePeripherals::take().unwrap();
+    let  p = Peripherals::take().unwrap();
 
     let mut rcc = p.RCC.constrain();
     let clocks = rcc

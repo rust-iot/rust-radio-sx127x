@@ -35,7 +35,6 @@ use heapless::{consts, Vec};
 
 use embedded_hal::blocking::delay::DelayMs;
 
-use embedded_hal_compat::eh1_0::blocking::delay::DelayMs as _;
 use embedded_hal_compat::IntoCompat;
 
 // MODE needs the old version as it is passed to the device hal crates
