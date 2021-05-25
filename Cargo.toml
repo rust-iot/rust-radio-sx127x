@@ -9,28 +9,25 @@ edition = "2018"
 
 [features]
 util = [ "structopt", "driver-pal/hal", "simplelog", "humantime" ] 
-default = [ "util", "serde" ]
+default = [ "util", "serde", "driver-pal/hal-cp2130", "driver-pal/hal-linux" ]
 
 [dependencies]
 libc = "0.2"
 log = { version = "0.4" }
 bitflags = "1.0"
-serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
+radio = "0.9.0"
+embedded-hal = "1.0.0-alpha.4"
 
+serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
 structopt = { version = "0.3.21", optional = true }
 simplelog = { version = "0.8.0", optional = true }
 humantime = { version = "2.0.0", optional = true }
 linux-embedded-hal = { version = "0.4.0-alpha.0", optional = true }
-driver-cp2130 = { version = "1.0.0-alpha.1", optional = true }
+driver-cp2130 = { version = "1.0.0-alpha.2", optional = true }
 
-[dependencies.radio]
-version = "0.7.0"
-
-[dependencies.embedded-hal]
-version = "1.0.0-alpha.4"
 
 [dependencies.driver-pal]
-version = "0.8.0-alpha.0"
+version = "0.8.0-alpha.2"
 default-features = false
 
 [dev-dependencies]
@@ -47,10 +44,3 @@ name = "integration"
 path = "tests/integration.rs"
 required-features = ["utils"]
 
-
-[patch.crates-io]
-# Patch for radio-hal to update embedded-hal version
-radio = { git = "https://github.com/ryankurte/rust-radio.git", branch = "master" }
-
-# Fix for libusb-sys package discovery
-libusb-sys = { git = "https://github.com/cmsd2/libusb-sys" } 
