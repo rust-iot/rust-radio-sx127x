@@ -31,7 +31,7 @@ use cortex_m_rt::entry;
 use cortex_m_semihosting::*;
 use nb::block;
 
-use heapless::{consts, Vec};
+use heapless;
 
 use embedded_hal::blocking::delay::DelayMs;
 
@@ -262,8 +262,8 @@ fn main() -> ! {
     let (mut _tx_gps, mut rx_gps, mut lora) = setup(); //  GPS, lora (delay is available in lora)
 
     // byte buffer   Nov 2020 limit data.len() < 255 in radio_sx127x  .start_transmit
-    let mut buffer: Vec<u8, consts::U80> = Vec::new();
-    let mut buf2: Vec<u8, consts::U80> = Vec::new();
+    let mut buffer: heapless::Vec<u8, 80> = heapless::Vec::new();
+    let mut buf2:   heapless::Vec<u8, 80> = heapless::Vec::new();
 
     //hprintln!("buffer at {} of {}", buffer.len(), buffer.capacity()).unwrap();  //0 of 80
     //hprintln!("buf2   at {} of {}",   buf2.len(),   buf2.capacity()).unwrap();  //0 of 80
