@@ -2,7 +2,7 @@ name: Rust
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master]
     tags: [ 'v*' ]
   pull_request:
     branches: [ master ]
@@ -26,12 +26,15 @@ jobs:
             use_cross: false
             experimental: false
             args: --features util,driver-pal/hal-cp2130,driver-pal/hal-linux
-          - target: armv7-unknown-linux-gnueabihf 
+
+          # probably want next three targets on master, but they are time consuming when testing examples
+          - target: armv7-unknown-linux-gnueabihf
             os: ubuntu-latest
             output: sx127x-util
             use_cross: false
             experimental: true
             args: --features util,driver-pal/hal-cp2130,driver-pal/hal-linux
+          
           - target: x86_64-apple-darwin
             os: macos-latest
             output: sx127x-util
@@ -92,7 +95,8 @@ jobs:
       with:
         key: ${{ matrix.os }}-${{ matrix.target }}
         path: $VCPKG_DIRECTORY
-
+      
+    # probably want next 4 name sections on master, but not on forks and branches
     - name: Build release
       uses: actions-rs/cargo@v1
       with:
@@ -121,6 +125,51 @@ jobs:
         tag: ${{ github.ref }}
         overwrite: true
 
+  test_examples:
+    name: Test examples
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        mcu: [stm32f103, stm32f411 ]
+        include:
+           - mcu:  stm32f103
+             hal: "stm32f1xx"
+             trg: "thumbv7m-none-eabi"
+           - mcu:  stm32f411
+             hal: "stm32f4xx"
+             trg: "thumbv7em-none-eabihf"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+      #- name: Build
+      #  uses: actions-rs/cargo@v1
+      #  with:
+      #    command: build
+      #    args:  --no-default-features --release --target ${{ matrix.trg }} --features ${{ matrix.mcu }},compat
+      - name: Build example lora_spi_send
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args:  --no-default-features --release --target ${{ matrix.trg }} --features ${{ matrix.hal }},${{ matrix.mcu }},compat --example lora_spi_send
+          use-cross: true
+      - name: Build example lora_spi_receive
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args:  --no-default-features --release --target ${{ matrix.trg }} --features ${{ matrix.hal }},${{ matrix.mcu }},compat --example lora_spi_receive
+          use-cross: true
+      - name: Build example lora_spi_gps
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args:  --no-default-features --release --target ${{ matrix.trg }} --features ${{ matrix.hal }},${{ matrix.mcu }},compat --example lora_spi_gps
+          use-cross: true
+
+  # probably want release on master, but not on forks and branches
   release:
     name: Create release
     runs-on: ubuntu-latest
