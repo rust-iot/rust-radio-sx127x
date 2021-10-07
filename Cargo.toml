@@ -20,7 +20,7 @@ bitflags = "1.0"
 
 driver-pal = { version = "0.8.0-alpha.4", default_features = false }
 linux-embedded-hal = { version = "0.4.0-alpha.1", optional = true }
-driver-cp2130 = { version = "1.0.0-alpha.3", optional = true }
+driver-cp2130 = { version = "1.0.0-alpha.4", optional = true }
 
 serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
 structopt = { version = "0.3.21", optional = true }

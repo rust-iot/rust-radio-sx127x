@@ -29,7 +29,7 @@ jobs:
           - target: armv7-unknown-linux-gnueabihf 
             os: ubuntu-latest
             output: sx127x-util
-            use_cross: false
+            use_cross: true
             experimental: true
             args: --features util,driver-pal/hal-cp2130,driver-pal/hal-linux
           - target: x86_64-apple-darwin
@@ -74,10 +74,10 @@ jobs:
 
     - name: Install libusb (apt armv7)
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.target == 'armv7-unknown-linux-gnueabihf' }}
-      run: |
-        sudo dpkg --add-architecture armhf
-        sudo apt update
-        sudo apt install libusb-1.0-0-dev:armhf
+      uses: ryankurte/action-apt@v0.3.0
+      with:
+        arch: armhf
+        packages: libusb-1.0-0-dev:armhf
 
     - name: Install libusb (vcpkg)
       if: ${{ matrix.os == 'windows-latest' }}
