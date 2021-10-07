@@ -70,14 +70,14 @@ jobs:
     
     - name: Install libusb (apt native)
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu' }}
-      run: sudo apt install -y libusb-dev
+      run: sudo apt install -y libusb-1.0-0-dev
 
     - name: Install libusb (apt armv7)
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.target == 'armv7-unknown-linux-gnueabihf' }}
       run: |
         sudo dpkg --add-architecture armhf
         sudo apt update
-        sudo apt install libusb-dev:armhf
+        sudo apt install libusb-1.0-0-dev:armhf
 
     - name: Install libusb (vcpkg)
       if: ${{ matrix.os == 'windows-latest' }}
