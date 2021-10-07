@@ -149,9 +149,9 @@ dependencies = [
 
 [[package]]
 name = "driver-pal"
-version = "0.8.0-alpha.4"
+version = "0.8.0-alpha.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7ce46aecef16e52b51e03656c9418ecf30a0fe3a686e9647bc689821d1f17ca"
+checksum = "a573e04245e4e5db4acf120972ca90e1af82a1c9bd9e15078c875888a341c272"
 dependencies = [
  "driver-cp2130",
  "embedded-hal",
