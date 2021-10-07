@@ -103,7 +103,7 @@ jobs:
     - name: Copy / Rename utility
       run: |
         cp target/${{ matrix.target }}/release/${{ matrix.output }} ${{ matrix.output }}-${{ matrix.target }}
-        tar -cvf sx127x-util-${{ matrix.target }}.tgz ${{ matrix.output }}-${{ matrix.target }}
+        tar -czvf sx127x-util-${{ matrix.target }}.tgz ${{ matrix.output }}-${{ matrix.target }}
 
     - name: Upload utility artifacts
       uses: actions/upload-artifact@v1

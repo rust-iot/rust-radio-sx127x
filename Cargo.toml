@@ -7,6 +7,10 @@ repository = "https://github.com/ryankurte/rust-radio-sx127x"
 license = "MPL-2.0"
 edition = "2018"
 
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/sx127x-util-{ target }.tgz"
+bin-dir = "{ bin }-{ target }{ format }"
+
 [features]
 util = [ "structopt", "driver-pal/hal", "simplelog", "humantime" ] 
 default = [ "util", "serde", "driver-pal/hal-cp2130", "driver-pal/hal-linux" ]
