@@ -5,8 +5,8 @@
 
 use core::fmt::Debug;
 
-use embedded_hal::blocking::delay::{DelayMs, DelayUs};
-use embedded_hal::blocking::spi::Transactional;
+use embedded_hal::delay::blocking::{DelayMs, DelayUs};
+use embedded_hal::spi::blocking::Transactional;
 
 use driver_pal::{Reset, Busy, PinState, PrefixRead, PrefixWrite};
 use driver_pal::Error as WrapError;
@@ -22,7 +22,7 @@ pub trait Base<CommsError, PinError, DelayError> {
     fn wait_busy(&mut self) -> Result<(), Error<CommsError, PinError, DelayError>>;
 
     /// Delay for the specified time
-    fn try_delay_ms(&mut self, ms: u32) -> Result<(), DelayError>;
+    fn delay_ms(&mut self, ms: u32) -> Result<(), DelayError>;
 
     /// Write a slice of data to the specified register
     fn write_regs(&mut self, reg: u8, data: &[u8]) -> Result<(), Error<CommsError, PinError, DelayError>>;
@@ -64,9 +64,11 @@ pub trait Base<CommsError, PinError, DelayError> {
 /// Implement HAL for embedded helper trait implementers
 impl<T, CommsError, PinError, DelayError> Base<CommsError, PinError, DelayError> for T
 where
-    T: Transactional<u8, Error = WrapError<CommsError, PinError, DelayError>> + PrefixRead<Error=WrapError<CommsError, PinError, DelayError>> + PrefixWrite<Error=WrapError<CommsError, PinError, DelayError>>,
-    T: Reset<Error = WrapError<CommsError, PinError, DelayError>>,
-    T: Busy<Error = WrapError<CommsError, PinError, DelayError>>,
+    T: Transactional<u8, Error = WrapError<CommsError, PinError, DelayError>> 
+            + PrefixRead<Error=WrapError<CommsError, PinError, DelayError>> 
+            + PrefixWrite<Error=WrapError<CommsError, PinError, DelayError>>,
+    T: Reset<Error = PinError>,
+    T: Busy<Error = PinError>,
     T: DelayMs<u32, Error=DelayError> + DelayUs<u32, Error=DelayError>,
     CommsError: Debug + Sync + Send + 'static,
     PinError: Debug + Sync + Send + 'static,
@@ -74,10 +76,10 @@ where
 {
     /// Reset the radio
     fn reset(&mut self) -> Result<(), Error<CommsError, PinError, DelayError>> {
-        self.set_reset(PinState::Low).map_err(|e| Error::from(e))?;
-        self.try_delay_ms(1).map_err(WrapError::Delay)?;
-        self.set_reset(PinState::High).map_err(|e| Error::from(e))?;
-        self.try_delay_ms(10).map_err(WrapError::Delay)?;
+        self.set_reset(PinState::Low).map_err(WrapError::Pin)?;
+        self.delay_ms(1).map_err(WrapError::Delay)?;
+        self.set_reset(PinState::High).map_err(WrapError::Pin)?;
+        self.delay_ms(10).map_err(WrapError::Delay)?;
 
         Ok(())
     }
@@ -89,8 +91,8 @@ where
     }
 
     /// Delay for the specified time
-    fn try_delay_ms(&mut self, ms: u32) -> Result<(), DelayError> {
-        DelayMs::try_delay_ms(self, ms)?;
+    fn delay_ms(&mut self, ms: u32) -> Result<(), DelayError> {
+        DelayMs::delay_ms(self, ms)?;
         Ok(())
     }
 
@@ -104,7 +106,7 @@ where
         let out_buf: [u8; 1] = [reg as u8 & 0x7F];
         self.wait_busy()?;
         let r = self
-            .try_prefix_read(&out_buf, data)
+            .prefix_read(&out_buf, data)
             .map(|_| ())
             .map_err(|e| e.into());
         self.wait_busy()?;
@@ -116,7 +118,7 @@ where
         // Setup register write
         let out_buf: [u8; 1] = [reg as u8 | 0x80];
         self.wait_busy()?;
-        let r = self.try_prefix_write(&out_buf, data).map_err(|e| e.into());
+        let r = self.prefix_write(&out_buf, data).map_err(|e| e.into());
         self.wait_busy()?;
         r
     }
@@ -126,7 +128,7 @@ where
         // Setup fifo buffer write
         let out_buf: [u8; 1] = [0x00 | 0x80];
         self.wait_busy()?;
-        let r = self.try_prefix_write(&out_buf, data).map_err(|e| e.into());
+        let r = self.prefix_write(&out_buf, data).map_err(|e| e.into());
         self.wait_busy()?;
         r
     }
@@ -137,7 +139,7 @@ where
         let out_buf: [u8; 1] = [0x00];
         self.wait_busy()?;
         let r = self
-            .try_prefix_read(&out_buf, data)
+            .prefix_read(&out_buf, data)
             .map(|_| ())
             .map_err(|e| e.into());
         self.wait_busy()?;

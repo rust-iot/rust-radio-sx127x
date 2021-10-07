@@ -15,10 +15,10 @@ use core::fmt::Debug;
 
 use log::{trace, debug, warn};
 
-use embedded_hal::blocking::delay::{DelayMs, DelayUs};
-use embedded_hal::blocking::spi::{Transfer, Write, Transactional};
-use embedded_hal::digital::{InputPin, OutputPin};
 use embedded_hal::spi::{Mode as SpiMode, Phase, Polarity};
+use embedded_hal::spi::blocking::{Transfer, Write, Transactional};
+use embedded_hal::delay::blocking::{DelayMs, DelayUs};
+use embedded_hal::digital::blocking::{InputPin, OutputPin};
 
 use driver_pal::{wrapper::Wrapper as SpiWrapper, Error as WrapError};
 
@@ -114,10 +114,10 @@ impl Default for Settings {
     }
 }
 
-pub type Sx127xSpi<Spi, SpiError, CsPin, BusyPin, ReadyPin, SdnPin, PinError, Delay, DelayError> = Sx127x<SpiWrapper<Spi, SpiError, CsPin, BusyPin, ReadyPin, SdnPin, PinError, Delay, DelayError>, SpiError, PinError, DelayError>;
+pub type Sx127xSpi<Spi, SpiError, CsPin, BusyPin, ReadyPin, SdnPin, PinError, Delay, DelayError> = Sx127x<SpiWrapper<Spi, CsPin, BusyPin, ReadyPin, SdnPin, Delay>, SpiError, PinError, DelayError>;
 
 impl<Spi, SpiError, CsPin, BusyPin, ReadyPin, ResetPin, PinError, Delay, DelayError>
-    Sx127x<SpiWrapper<Spi, SpiError, CsPin, BusyPin, ReadyPin, ResetPin, PinError, Delay, DelayError>, SpiError, PinError, DelayError>
+    Sx127x<SpiWrapper<Spi, CsPin, BusyPin, ReadyPin, ResetPin, Delay>, SpiError, PinError, DelayError>
 where
     Spi: Transfer<u8, Error = SpiError> + Write<u8, Error = SpiError> + Transactional<u8, Error = SpiError>,
     CsPin: OutputPin<Error = PinError>,
@@ -283,7 +283,7 @@ where
             }
             
 
-            self.hal.try_delay_ms(1).map_err(Error::Delay)?;
+            self.hal.delay_ms(1).map_err(Error::Delay)?;
             ticks += 1;
         }
         Ok(())
@@ -438,8 +438,8 @@ where
 {
     type Error = Error<CommsError, PinError, DelayError>;
 
-    fn try_delay_ms(&mut self, t: u32) -> Result<(), Error<CommsError, PinError, DelayError>> {
-        self.hal.try_delay_ms(t).map_err(Error::Delay)
+    fn delay_ms(&mut self, t: u32) -> Result<(), Error<CommsError, PinError, DelayError>> {
+        self.hal.delay_ms(t).map_err(Error::Delay)
     }
 }
 
