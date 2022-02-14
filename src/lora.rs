@@ -391,9 +391,8 @@ where
     ///  and returns the number of bytes received on success
     pub(crate) fn lora_get_received(
         &mut self,
-        info: &mut PacketInfo,
         data: &mut [u8],
-    ) -> Result<usize, Error<CommsError, PinError, DelayError>> {
+    ) -> Result<(usize, PacketInfo), Error<CommsError, PinError, DelayError>> {
         // Fetch the number of bytes and current RX address pointer
         let n = self.read_reg(regs::LoRa::RXNBBYTES)? as usize;
         let r = self.read_reg(regs::LoRa::FIFORXCURRENTADDR)?;
@@ -402,8 +401,9 @@ where
         let snr = self.read_reg(regs::LoRa::PKTSNRVALUE)? as i16;
 
         let (rssi, snr) = self.lora_process_rssi_snr(rssi, snr);
-        info.rssi = rssi;
-        info.snr = Some(snr);
+        let info = PacketInfo{
+            rssi, snr: Some(snr),
+        };
 
         trace!("FIFO RX {} bytes with fifo rx ptr: {}", n, r);
 
@@ -425,7 +425,7 @@ where
 
         debug!("Received data: {:?} info: {:?}", &data[0..n], &info);
 
-        Ok(n)
+        Ok((n, info))
     }
 
     /// Poll for the current channel RSSI

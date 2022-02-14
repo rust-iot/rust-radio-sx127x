@@ -296,9 +296,8 @@ where
     ///  and returns the number of bytes received on success
     pub(crate) fn fsk_get_received(
         &mut self,
-        info: &mut PacketInfo,
         data: &mut [u8],
-    ) -> Result<usize, Error<CommsError, PinError, DelayError>> {
+    ) -> Result<(usize, PacketInfo), Error<CommsError, PinError, DelayError>> {
 
         let mut len = [0u8; 1];
         // Read the length byte from the FIFO
@@ -313,11 +312,14 @@ where
         self.hal.read_buff(&mut data[..len])?;
 
         // Read the RSSI
-        info.rssi = self.fsk_poll_rssi()?;
+        let info = PacketInfo{
+            rssi: self.fsk_poll_rssi()?,
+            snr: None,
+        };
 
         debug!("Received data: {:?} info: {:?}", &data[0..len], &info);
 
-        Ok(len)
+        Ok((len, info))
     }
 
     /// Poll for the current channel RSSI
