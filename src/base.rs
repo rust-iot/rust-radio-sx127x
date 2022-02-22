@@ -5,7 +5,7 @@
 
 use core::fmt::Debug;
 
-use embedded_hal::delay::blocking::{DelayMs, DelayUs};
+use embedded_hal::delay::blocking::{DelayUs};
 use embedded_hal::spi::blocking::Transactional;
 
 use driver_pal::{Reset, Busy, PinState, PrefixRead, PrefixWrite};
@@ -23,6 +23,9 @@ pub trait Base<CommsError, PinError, DelayError> {
 
     /// Delay for the specified time
     fn delay_ms(&mut self, ms: u32) -> Result<(), DelayError>;
+
+    /// Delay for the specified time
+    fn delay_us(&mut self, us: u32) -> Result<(), DelayError>;
 
     /// Write a slice of data to the specified register
     fn write_regs(&mut self, reg: u8, data: &[u8]) -> Result<(), Error<CommsError, PinError, DelayError>>;
@@ -69,7 +72,7 @@ where
             + PrefixWrite<Error=WrapError<CommsError, PinError, DelayError>>,
     T: Reset<Error = PinError>,
     T: Busy<Error = PinError>,
-    T: DelayMs<u32, Error=DelayError> + DelayUs<u32, Error=DelayError>,
+    T: DelayUs<Error=DelayError>,
     CommsError: Debug + Sync + Send + 'static,
     PinError: Debug + Sync + Send + 'static,
     DelayError: Debug + Sync + Send + 'static,
@@ -92,7 +95,13 @@ where
 
     /// Delay for the specified time
     fn delay_ms(&mut self, ms: u32) -> Result<(), DelayError> {
-        DelayMs::delay_ms(self, ms)?;
+        DelayUs::delay_ms(self, ms)?;
+        Ok(())
+    }
+
+    /// Delay for the specified time
+    fn delay_us(&mut self, us: u32) -> Result<(), DelayError> {
+        DelayUs::delay_us(self, us)?;
         Ok(())
     }
 
