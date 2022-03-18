@@ -6,111 +6,39 @@
 use core::fmt::Debug;
 
 use embedded_hal::delay::blocking::{DelayUs};
-use embedded_hal::spi::blocking::Transactional;
+use embedded_hal::digital::blocking::{OutputPin, InputPin};
+use embedded_hal::spi::blocking::{Transactional, TransferInplace, Write};
 
-use driver_pal::{Reset, Busy, PinState, PrefixRead, PrefixWrite};
 use driver_pal::Error as WrapError;
 
-use crate::Error;
+/// HAL trait for radio interaction, may be generic over SPI or UART connections
+pub trait Hal {
+    type Error: Debug + 'static;
 
-/// Base implementation can be generic over SPI or UART connections
-pub trait Base<CommsError, PinError, DelayError> {
     /// Reset the device
-    fn reset(&mut self) -> Result<(), Error<CommsError, PinError, DelayError>>;
+    fn reset(&mut self) -> Result<(), Self::Error>;
 
     /// Wait on radio device busy
-    fn wait_busy(&mut self) -> Result<(), Error<CommsError, PinError, DelayError>>;
+    fn wait_busy(&mut self) -> Result<(), Self::Error>;
 
     /// Delay for the specified time
-    fn delay_ms(&mut self, ms: u32) -> Result<(), DelayError>;
+    fn delay_ms(&mut self, ms: u32) -> Result<(), Self::Error>;
 
     /// Delay for the specified time
-    fn delay_us(&mut self, us: u32) -> Result<(), DelayError>;
+    fn delay_us(&mut self, us: u32) -> Result<(), Self::Error>;
 
-    /// Write a slice of data to the specified register
-    fn write_regs(&mut self, reg: u8, data: &[u8]) -> Result<(), Error<CommsError, PinError, DelayError>>;
-    /// Read a slice of data from the specified register
-    fn read_regs(&mut self, reg: u8, data: &mut [u8]) -> Result<(), Error<CommsError, PinError, DelayError>>;
+    /// Read from radio with prefix
+    fn prefix_read(&mut self, prefix: &[u8], data: &mut [u8]) -> Result<(), Self::Error>;
 
-    /// Write to the specified FIFO buffer
-    fn write_buff(&mut self, data: &[u8]) -> Result<(), Error<CommsError, PinError, DelayError>>;
-    /// Read from the specified FIFO buffer
-    fn read_buff(&mut self, data: &mut [u8]) -> Result<(), Error<CommsError, PinError, DelayError>>;
+    /// Write to radio with prefix
+    fn prefix_write(&mut self, prefix: &[u8], data: &[u8]) -> Result<(), Self::Error>;
 
-    /// Read a single u8 value from the specified register
-    fn read_reg(&mut self, reg: u8) -> Result<u8, Error<CommsError, PinError, DelayError>> {
-        let mut incoming = [0u8; 1];
-        self.read_regs(reg.into(), &mut incoming)?;
-        Ok(incoming[0])
-    }
-
-    /// Write a single u8 value to the specified register
-    fn write_reg(&mut self, reg: u8, value: u8) -> Result<(), Error<CommsError, PinError, DelayError>> {
-        self.write_regs(reg.into(), &[value])?;
-        Ok(())
-    }
-
-    /// Update the specified register with the provided value & mask
-    fn update_reg(
-        &mut self,
-        reg: u8,
-        mask: u8,
-        value: u8,
-    ) -> Result<u8, Error<CommsError, PinError, DelayError>> {
-        let existing = self.read_reg(reg)?;
-        let updated = (existing & !mask) | (value & mask);
-        self.write_reg(reg, updated)?;
-        Ok(updated)
-    }
-}
-
-/// Implement HAL for embedded helper trait implementers
-impl<T, CommsError, PinError, DelayError> Base<CommsError, PinError, DelayError> for T
-where
-    T: Transactional<u8, Error = WrapError<CommsError, PinError, DelayError>> 
-            + PrefixRead<Error=WrapError<CommsError, PinError, DelayError>> 
-            + PrefixWrite<Error=WrapError<CommsError, PinError, DelayError>>,
-    T: Reset<Error = PinError>,
-    T: Busy<Error = PinError>,
-    T: DelayUs<Error=DelayError>,
-    CommsError: Debug + Sync + Send + 'static,
-    PinError: Debug + Sync + Send + 'static,
-    DelayError: Debug + Sync + Send + 'static,
-{
-    /// Reset the radio
-    fn reset(&mut self) -> Result<(), Error<CommsError, PinError, DelayError>> {
-        self.set_reset(PinState::Low).map_err(WrapError::Pin)?;
-        self.delay_ms(1).map_err(WrapError::Delay)?;
-        self.set_reset(PinState::High).map_err(WrapError::Pin)?;
-        self.delay_ms(10).map_err(WrapError::Delay)?;
-
-        Ok(())
-    }
-
-    /// Wait on radio device busy
-    fn wait_busy(&mut self) -> Result<(), Error<CommsError, PinError, DelayError>> {
-        // TODO: suspiciously unimplemented?!
-        Ok(())
-    }
-
-    /// Delay for the specified time
-    fn delay_ms(&mut self, ms: u32) -> Result<(), DelayError> {
-        DelayUs::delay_ms(self, ms)?;
-        Ok(())
-    }
-
-    /// Delay for the specified time
-    fn delay_us(&mut self, us: u32) -> Result<(), DelayError> {
-        DelayUs::delay_us(self, us)?;
-        Ok(())
-    }
-
-    /// Read from the specified register
-    fn read_regs<'a>(
-        &mut self,
-        reg: u8,
-        data: &mut [u8],
-    ) -> Result<(), Error<CommsError, PinError, DelayError>> {
+   /// Read from the specified register
+   fn read_regs<'a>(
+    &mut self,
+    reg: u8,
+    data: &mut [u8],
+    ) -> Result<(), Self::Error> {
         // Setup register read
         let out_buf: [u8; 1] = [reg as u8 & 0x7F];
         self.wait_busy()?;
@@ -123,7 +51,7 @@ where
     }
 
     /// Write to the specified register
-    fn write_regs(&mut self, reg: u8, data: &[u8]) -> Result<(), Error<CommsError, PinError, DelayError>> {
+    fn write_regs(&mut self, reg: u8, data: &[u8]) -> Result<(), Self::Error> {
         // Setup register write
         let out_buf: [u8; 1] = [reg as u8 | 0x80];
         self.wait_busy()?;
@@ -133,7 +61,7 @@ where
     }
 
     /// Write to the specified buffer
-    fn write_buff(&mut self, data: &[u8]) -> Result<(), Error<CommsError, PinError, DelayError>> {
+    fn write_buff(&mut self, data: &[u8]) -> Result<(), Self::Error> {
         // Setup fifo buffer write
         let out_buf: [u8; 1] = [0x00 | 0x80];
         self.wait_busy()?;
@@ -143,7 +71,7 @@ where
     }
 
     /// Read from the specified buffer
-    fn read_buff<'a>(&mut self, data: &mut [u8]) -> Result<(), Error<CommsError, PinError, DelayError>> {
+    fn read_buff<'a>(&mut self, data: &mut [u8]) -> Result<(), Self::Error> {
         // Setup fifo buffer read
         let out_buf: [u8; 1] = [0x00];
         self.wait_busy()?;
@@ -153,5 +81,127 @@ where
             .map_err(|e| e.into());
         self.wait_busy()?;
         r
+    }
+
+    /// Read a single u8 value from the specified register
+    fn read_reg(&mut self, reg: u8) -> Result<u8, Self::Error> {
+        let mut incoming = [0u8; 1];
+        self.read_regs(reg.into(), &mut incoming)?;
+        Ok(incoming[0])
+    }
+
+    /// Write a single u8 value to the specified register
+    fn write_reg(&mut self, reg: u8, value: u8) -> Result<(), Self::Error> {
+        self.write_regs(reg.into(), &[value])?;
+        Ok(())
+    }
+
+    /// Update the specified register with the provided value & mask
+    fn update_reg(
+        &mut self,
+        reg: u8,
+        mask: u8,
+        value: u8,
+    ) -> Result<u8, Self::Error> {
+        let existing = self.read_reg(reg)?;
+        let updated = (existing & !mask) | (value & mask);
+        self.write_reg(reg, updated)?;
+        Ok(updated)
+    }
+}
+
+/// Helper SPI trait to tie errors together (no longer required next HAL release)
+pub trait SpiBase: TransferInplace<u8, Error = <Self as SpiBase>::Error> + Write<u8, Error = <Self as SpiBase>::Error> + Transactional<u8, Error = <Self as SpiBase>::Error> {
+    type Error;
+}
+
+impl <T: TransferInplace<u8, Error = E> + Write<u8, Error = E> + Transactional<u8, Error = E>, E> SpiBase for T {
+    type Error = E;
+}
+
+/// Spi base object defined interface for interacting with radio via SPI
+pub struct Base <Spi: SpiBase, Cs: OutputPin, Busy: InputPin, Ready: InputPin, Sdn: OutputPin, Delay: DelayUs> {
+    pub spi: Spi,
+    pub cs: Cs,
+    pub busy: Busy,
+    pub ready: Ready,
+    pub sdn: Sdn,
+    pub delay: Delay,
+}
+
+/// Implement HAL for base object
+impl<Spi, Cs, Busy, Ready, Sdn, PinError, Delay> Hal for Base<Spi, Cs, Busy, Ready, Sdn, Delay>
+where
+    Spi: SpiBase,
+    <Spi as SpiBase>::Error: Debug + 'static,
+    
+    Cs: OutputPin<Error=PinError>,
+    Busy: InputPin<Error=PinError>,
+    Ready: InputPin<Error=PinError>,
+    Sdn: OutputPin<Error=PinError>,
+    PinError: Debug + 'static,
+
+    Delay: DelayUs,
+    <Delay as DelayUs>::Error: Debug + 'static,
+{
+    type Error = WrapError<<Spi as SpiBase>::Error, PinError, <Delay as DelayUs>::Error>;
+
+    /// Reset the radio
+    fn reset(&mut self) -> Result<(), Self::Error> {
+        self.sdn.set_low().map_err(WrapError::Pin)?;
+
+        self.delay.delay_ms(1).map_err(WrapError::Delay)?;
+
+        self.sdn.set_high().map_err(WrapError::Pin)?;
+
+        self.delay.delay_ms(10).map_err(WrapError::Delay)?;
+
+        Ok(())
+    }
+
+    /// Wait on radio device busy
+    fn wait_busy(&mut self) -> Result<(), Self::Error> {
+        // TODO: suspiciously unimplemented?!
+        Ok(())
+    }
+
+    /// Delay for the specified time
+    fn delay_ms(&mut self, ms: u32) -> Result<(), Self::Error> {
+        self.delay.delay_ms(ms).map_err(WrapError::Delay)?;
+        Ok(())
+    }
+
+    /// Delay for the specified time
+    fn delay_us(&mut self, us: u32) -> Result<(), Self::Error> {
+        self.delay.delay_us(us).map_err(WrapError::Delay)?;
+        Ok(())
+    }
+
+    /// Write data with prefix, asserting CS as required
+    fn prefix_write(&mut self, prefix: &[u8], data: &[u8]) -> Result<(), Self::Error> {
+        self.cs.set_low().map_err(WrapError::Pin)?;
+
+        let r = self.spi.write(prefix).map(|_| self.spi.write(data));
+
+        self.cs.set_high().map_err(WrapError::Pin)?;
+
+        match r {
+            Ok(Ok(_)) => Ok(()),
+            Ok(Err(e)) | Err(e) => Err(WrapError::Spi(e)),
+        }
+    }
+
+    /// Read data with prefix, asserting CS as required
+    fn prefix_read(&mut self, prefix: &[u8], data: &mut [u8]) -> Result<(), Self::Error> {
+        self.cs.set_low().map_err(WrapError::Pin)?;
+
+        let r = self.spi.write(prefix).map(|_| self.spi.transfer_inplace(data));
+
+        self.cs.set_high().map_err(WrapError::Pin)?;
+
+        match r {
+            Ok(Ok(_)) => Ok(()),
+            Ok(Err(e)) | Err(e) => Err(WrapError::Spi(e)),
+        }
     }
 }
