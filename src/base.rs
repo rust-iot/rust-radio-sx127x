@@ -9,8 +9,6 @@ use embedded_hal::delay::blocking::{DelayUs};
 use embedded_hal::digital::blocking::{OutputPin, InputPin};
 use embedded_hal::spi::blocking::{Transactional, TransferInplace, Write};
 
-use driver_pal::Error as WrapError;
-
 /// HAL trait for radio interaction, may be generic over SPI or UART connections
 pub trait Hal {
     type Error: Debug + 'static;
@@ -110,6 +108,14 @@ pub trait Hal {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature="defmt", derive(defmt::Format))]
+pub enum HalError<Spi, Pin, Delay> {
+    Spi(Spi),
+    Pin(Pin),
+    Delay(Delay),
+}
+
 /// Helper SPI trait to tie errors together (no longer required next HAL release)
 pub trait SpiBase: TransferInplace<u8, Error = <Self as SpiBase>::Error> + Write<u8, Error = <Self as SpiBase>::Error> + Transactional<u8, Error = <Self as SpiBase>::Error> {
     type Error;
@@ -144,17 +150,17 @@ where
     Delay: DelayUs,
     <Delay as DelayUs>::Error: Debug + 'static,
 {
-    type Error = WrapError<<Spi as SpiBase>::Error, PinError, <Delay as DelayUs>::Error>;
+    type Error = HalError<<Spi as SpiBase>::Error, PinError, <Delay as DelayUs>::Error>;
 
     /// Reset the radio
     fn reset(&mut self) -> Result<(), Self::Error> {
-        self.sdn.set_low().map_err(WrapError::Pin)?;
+        self.sdn.set_low().map_err(HalError::Pin)?;
 
-        self.delay.delay_ms(1).map_err(WrapError::Delay)?;
+        self.delay.delay_ms(1).map_err(HalError::Delay)?;
 
-        self.sdn.set_high().map_err(WrapError::Pin)?;
+        self.sdn.set_high().map_err(HalError::Pin)?;
 
-        self.delay.delay_ms(10).map_err(WrapError::Delay)?;
+        self.delay.delay_ms(10).map_err(HalError::Delay)?;
 
         Ok(())
     }
@@ -167,41 +173,41 @@ where
 
     /// Delay for the specified time
     fn delay_ms(&mut self, ms: u32) -> Result<(), Self::Error> {
-        self.delay.delay_ms(ms).map_err(WrapError::Delay)?;
+        self.delay.delay_ms(ms).map_err(HalError::Delay)?;
         Ok(())
     }
 
     /// Delay for the specified time
     fn delay_us(&mut self, us: u32) -> Result<(), Self::Error> {
-        self.delay.delay_us(us).map_err(WrapError::Delay)?;
+        self.delay.delay_us(us).map_err(HalError::Delay)?;
         Ok(())
     }
 
     /// Write data with prefix, asserting CS as required
     fn prefix_write(&mut self, prefix: &[u8], data: &[u8]) -> Result<(), Self::Error> {
-        self.cs.set_low().map_err(WrapError::Pin)?;
+        self.cs.set_low().map_err(HalError::Pin)?;
 
         let r = self.spi.write(prefix).map(|_| self.spi.write(data));
 
-        self.cs.set_high().map_err(WrapError::Pin)?;
+        self.cs.set_high().map_err(HalError::Pin)?;
 
         match r {
             Ok(Ok(_)) => Ok(()),
-            Ok(Err(e)) | Err(e) => Err(WrapError::Spi(e)),
+            Ok(Err(e)) | Err(e) => Err(HalError::Spi(e)),
         }
     }
 
     /// Read data with prefix, asserting CS as required
     fn prefix_read(&mut self, prefix: &[u8], data: &mut [u8]) -> Result<(), Self::Error> {
-        self.cs.set_low().map_err(WrapError::Pin)?;
+        self.cs.set_low().map_err(HalError::Pin)?;
 
         let r = self.spi.write(prefix).map(|_| self.spi.transfer_inplace(data));
 
-        self.cs.set_high().map_err(WrapError::Pin)?;
+        self.cs.set_high().map_err(HalError::Pin)?;
 
         match r {
             Ok(Ok(_)) => Ok(()),
-            Ok(Err(e)) | Err(e) => Err(WrapError::Spi(e)),
+            Ok(Err(e)) | Err(e) => Err(HalError::Spi(e)),
         }
     }
 }

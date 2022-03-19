@@ -12,7 +12,7 @@ pkg-url = "{ repo }/releases/download/v{ version }/sx127x-util-{ target }.tgz"
 bin-dir = "{ bin }-{ target }{ format }"
 
 [features]
-util = [ "structopt", "driver-pal/hal", "simplelog", "humantime" ] 
+util = [ "structopt", "driver-pal", "driver-pal/hal", "simplelog", "humantime" ] 
 default = [ "util", "serde", "driver-pal/hal-cp2130", "driver-pal/hal-linux" ]
 
 [dependencies]
@@ -22,7 +22,7 @@ libc = "0.2"
 log = { version = "0.4" }
 bitflags = "1.0"
 
-driver-pal = { version = "0.8.0-alpha.6", default_features = false }
+driver-pal = { version = "0.8.0-alpha.6", default_features = false, optional=true }
 
 serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
 structopt = { version = "0.3.21", optional = true }

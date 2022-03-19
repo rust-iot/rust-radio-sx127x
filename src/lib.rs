@@ -12,17 +12,14 @@
 use core::convert::TryFrom;
 use core::fmt::Debug;
 
-use base::{Base, SpiBase};
+use base::{Base, SpiBase, HalError};
 use log::{trace, debug, warn};
 
 use embedded_hal::spi::{Mode as SpiMode, Phase, Polarity};
 use embedded_hal::delay::blocking::{DelayUs};
 use embedded_hal::digital::blocking::{InputPin, OutputPin};
 
-use driver_pal::{Error as WrapError};
-
 use radio::{Power as _, State as _};
-
 
 pub mod base;
 
@@ -128,7 +125,7 @@ where
         sdn: SdnPin,
         delay: Delay,
         config: &Config,
-    ) -> Result<Self, Error<WrapError<<Spi as SpiBase>::Error, PinError, <Delay as DelayUs>::Error>>> {
+    ) -> Result<Self, Error<HalError<<Spi as SpiBase>::Error, PinError, <Delay as DelayUs>::Error>>> {
         // Create SpiWrapper over spi/cs/busy/ready/reset
         let base = Base{spi, cs, sdn, busy, ready, delay};
 
