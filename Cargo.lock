@@ -129,9 +129,9 @@ dependencies = [
 
 [[package]]
 name = "driver-cp2130"
-version = "1.0.0-alpha.4"
+version = "1.0.0-alpha.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8008b0decf012ea4c1635b3e7c54fcecb6e74c7ab57f939426d7269204a5dc2d"
+checksum = "e4e506a531324c6b6b0cd1873fc86b73c7d7cd074445e1af059adc7ceadae332"
 dependencies = [
  "bitflags",
  "byteorder",
@@ -149,9 +149,9 @@ dependencies = [
 
 [[package]]
 name = "driver-pal"
-version = "0.8.0-alpha.5"
+version = "0.8.0-alpha.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a573e04245e4e5db4acf120972ca90e1af82a1c9bd9e15078c875888a341c272"
+checksum = "94d4b407622815edaabcb93b62d983f9fa13baeb5cb087a28754c6332d3a0ca9"
 dependencies = [
  "driver-cp2130",
  "embedded-hal",
@@ -165,9 +165,9 @@ dependencies = [
 
 [[package]]
 name = "embedded-hal"
-version = "1.0.0-alpha.5"
+version = "1.0.0-alpha.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a554c04648665230499563ccdfd1fcd719ef2d5a0af54bdc81c5d877fb556db4"
+checksum = "93cc714edeae73aa1ff259af4498595360b2992e0e9c59801873ed198a7f2216"
 dependencies = [
  "nb",
 ]
@@ -213,9 +213,9 @@ checksum = "f0a01e0497841a3b2db4f8afa483cce65f7e96a3498bd6c541734792aeac8fe7"
 
 [[package]]
 name = "gpio-cdev"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bff941d54b0751ff802f999a4d7bb3a295b9d0d04818fcd0ede802b3d3b8a47e"
+checksum = "409296415b8abc7b47e5b77096faae14595c53724972da227434fc8f4b05ec8b"
 dependencies = [
  "bitflags",
  "libc",
@@ -254,9 +254,9 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "i2cdev"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa6add3ad7531c7d496b1e1991a5b3cda2fb4fabd95cc44d995eb5d962d60f03"
+checksum = "b8fe61341e9ce588ede54fd131bf0df63eed3c6e45fcc7fa0e548ea176f39358"
 dependencies = [
  "bitflags",
  "byteorder",
@@ -299,15 +299,16 @@ dependencies = [
 
 [[package]]
 name = "linux-embedded-hal"
-version = "0.4.0-alpha.1"
+version = "0.4.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75a2aa947e4ac85f18c23f73a6bb77c52ef9593c30bf3cb312c017236f43b224"
+checksum = "59f67fcef5d29b3ca6328cb283cb7e944e942f54d229709b71bb618f67af55be"
 dependencies = [
  "cast",
  "embedded-hal",
  "gpio-cdev",
  "i2cdev",
  "nb",
+ "nix",
  "serial-core",
  "serial-unix",
  "spidev",
@@ -356,9 +357,9 @@ checksum = "546c37ac5d9e56f55e73b677106873d9d9f5190605e41a856503623648488cae"
 
 [[package]]
 name = "nix"
-version = "0.22.0"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf1e25ee6b412c2a1e3fcb6a4499a5c1bfe7f43e014bdce9a6b6666e5aa2d187"
+checksum = "9f866317acbd3a240710c63f065ffb1e4fd466259045ccb504130b7f668f35c6"
 dependencies = [
  "bitflags",
  "cc",
@@ -433,11 +434,11 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.29"
+version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9f5105d4fdaab20335ca9565e106a5d9b82b6219b5ba735731124ac6711d23d"
+checksum = "dd96a1e8ed2596c337f8eae5f24924ec83f5ad5ab21ea8e455d3566c69fbcaf7"
 dependencies = [
- "unicode-xid",
+ "unicode-ident",
 ]
 
 [[package]]
@@ -451,9 +452,9 @@ dependencies = [
 
 [[package]]
 name = "radio"
-version = "0.9.1"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2daa60788f83f8fa18976bca4712abd321056efbf26b4336b979c709dcae5e89"
+checksum = "9b5db8d0fe5e071842a0c435e65c7eb13fbf2c44bd90a3da722f2bf2bcbb2df7"
 dependencies = [
  "chrono",
  "embedded-hal",
@@ -463,16 +464,14 @@ dependencies = [
 
 [[package]]
 name = "radio-sx127x"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "bitflags",
  "color-backtrace",
- "driver-cp2130",
  "driver-pal",
  "embedded-hal",
  "humantime",
  "libc",
- "linux-embedded-hal",
  "log",
  "radio",
  "serde",
@@ -538,18 +537,18 @@ checksum = "7ef03e0a2b150c7a90d01faf6254c9c48a41e95fb2a8c2ac1c6f0d2b9aefc342"
 
 [[package]]
 name = "serde"
-version = "1.0.130"
+version = "1.0.139"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f12d06de37cf59146fbdecab66aa99f9fe4f78722e3607577a5375d66bd0c913"
+checksum = "0171ebb889e45aa68b44aee0859b3eede84c6f5f5c228e6f140c0b2a0a46cad6"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.130"
+version = "1.0.139"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7bc1a1ab1961464eae040d96713baa5a724a8152c1222492465b54322ec508b"
+checksum = "dc1d3230c1de7932af58ad8ffbe1d784bd55efd5a9d84ac24f69c72d83543dfb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -601,9 +600,9 @@ dependencies = [
 
 [[package]]
 name = "spidev"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e63d0d8a5d78aed00599555b5f5c80de8c0d942a365357b896e47029a19cc30"
+checksum = "5c43e891adf1abc1e09b10f80c8d91959ee20ec28425c6dadac78844ba4c709f"
 dependencies = [
  "bitflags",
  "libc",
@@ -642,13 +641,13 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.80"
+version = "1.0.98"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d010a1623fbd906d51d650a9916aaefc05ffa0e4053ff7fe601167f3e715d194"
+checksum = "c50aef8a904de4c23c788f104b7dddc7d6f79c647c7c8ce4cc8f73eb0ca773dd"
 dependencies = [
  "proc-macro2",
  "quote",
- "unicode-xid",
+ "unicode-ident",
 ]
 
 [[package]]
@@ -665,9 +664,9 @@ dependencies = [
 
 [[package]]
 name = "sysfs_gpio"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cea7ba0f212e0f56cf5f195a88e9b7c74fbbc03b8e16d009413bc8c89c63f7c7"
+checksum = "9ef9c9bcbfeb596ce4da59b2c59736235f35dcd516f03958ea10834473224157"
 dependencies = [
  "nix",
 ]
@@ -717,6 +716,12 @@ checksum = "a31142970826733df8241ef35dc040ef98c679ab14d7c3e54d827099b3acecaa"
 dependencies = [
  "serde",
 ]
+
+[[package]]
+name = "unicode-ident"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5bd2fe26506023ed7b5e1e315add59d6f584c621d037f9368fea9cfb988f368c"
 
 [[package]]
 name = "unicode-segmentation"
