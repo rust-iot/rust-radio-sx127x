@@ -4,16 +4,14 @@
 //!
 //! Copyright 2019 Ryan Kurte
 
-use log::{trace, debug, info, error};
-use simplelog::{TermLogger, TerminalMode, LevelFilter};
+use log::{debug, error, info, trace};
+use simplelog::{LevelFilter, TermLogger, TerminalMode};
 
-use structopt::StructOpt;
+use clap::Parser;
 
-
-use driver_pal::hal::{HalInst, HalDelay};
+use driver_pal::hal::{HalDelay, HalInst};
 
 use radio_sx127x::prelude::*;
-
 
 mod options;
 use options::*;
@@ -23,7 +21,7 @@ use operations::*;
 
 fn main() {
     // Load options
-    let opts = Options::from_args();
+    let opts = Options::parse();
 
     // Setup logging
     let mut log_config = simplelog::ConfigBuilder::new();
@@ -37,7 +35,7 @@ fn main() {
     // Connect to SPI peripheral
     debug!("Connecting to platform SPI");
     trace!("with config: {:?}", opts.spi_config);
-    let HalInst{base: _, spi, pins} = match HalInst::load(&opts.spi_config) {
+    let HalInst { base: _, spi, pins } = match HalInst::load(&opts.spi_config) {
         Ok(v) => v,
         Err(e) => {
             error!("Error connecting to platform HAL: {:?}", e);
@@ -70,13 +68,21 @@ fn main() {
 
             config.modem = Modem::FskOok(modem);
             config.channel = Channel::FskOok(channel);
-        },
+        }
         _ => (),
     }
 
     debug!("Creating radio instance");
-    let mut radio =
-        Sx127x::spi(spi, pins.cs, pins.busy, pins.ready, pins.reset, HalDelay {}, &config).expect("error creating device");
+    let mut radio = Sx127x::spi(
+        spi,
+        pins.cs,
+        pins.busy,
+        pins.ready,
+        pins.reset,
+        HalDelay {},
+        &config,
+    )
+    .expect("error creating device");
 
     debug!("Executing command");
     match opts.command {
@@ -85,7 +91,6 @@ fn main() {
                 .silicon_version()
                 .expect("error fetching chip version");
             info!("Silicon version: 0x{:X}", version);
-            return;
         }
         Command::LoRa(lora_config) => {
             do_command(radio, lora_config.operation).expect("error executing command");

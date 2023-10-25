@@ -8,7 +8,7 @@ pub use super::common::*;
 
 /// LoRa Radio Configuration Object
 #[derive(Copy, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(default))]
 pub struct LoRaConfig {
     /// LoRa Frequency hopping configuration (defaults to disabled)
@@ -41,7 +41,7 @@ impl Default for LoRaConfig {
 
 /// LoRa radio channel configuration
 #[derive(Copy, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(default))]
 pub struct LoRaChannel {
     /// LoRa frequency in Hz (defaults to 434 MHz)
@@ -70,7 +70,7 @@ pub const BANDWIDTH_MASK: u8 = 0b1111_0000;
 /// LoRa channel bandwidth in kHz
 #[allow(non_snake_case)]
 #[derive(Copy, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum Bandwidth {
     /// 62.5kHz bandwidth
     //Bandwidth62_5kHz = 0b0110_0000,
@@ -86,7 +86,7 @@ pub const SPREADING_FACTOR_MASK: u8 = 0b1111_0000;
 
 /// LoRa spreading factor in chips / symbol
 #[derive(Copy, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum SpreadingFactor {
     /// Sf6: 64 chips / symbol
     Sf6 = 0b0110_0000,
@@ -107,7 +107,7 @@ pub enum SpreadingFactor {
 pub const CODERATE_MASK: u8 = 0b0000_1110;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum CodingRate {
     /// LoRa Coding rate 4/5
     Cr4_5 = 0b0000_0010,
@@ -127,7 +127,7 @@ pub const RXPAYLOADCRC_MASK: u8 = 0b0000_0100;
 
 /// Payload RX CRC configuration
 #[derive(Copy, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum PayloadCrc {
     Disabled = 0x00,
     Enabled = 0x04,
@@ -143,7 +143,7 @@ pub const LOWDATARATEOPTIMIZE_MASK: u8 = 0b0000_1000;
 
 /// Low datarate optimization state
 #[derive(Copy, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum LowDatarateOptimise {
     /// Low datarate optimizations disabled
     Disabled = 0x00,
@@ -157,7 +157,7 @@ pub const PLLHOP_FASTHOP_OFF: u8 = 0b0000_0000;
 
 /// Frequency hopping configuration
 #[derive(Copy, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum FrequencyHopping {
     Disabled,
     /// Enabled specifies the number of symbol periods between frequency hops
@@ -174,7 +174,7 @@ pub const AUTOMATICIF_OFF: u8 = 0b0000_0000;
 
 /// LoRa detection optimization mode
 #[derive(Copy, Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))] 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum DetectionOptimize {
     /// Optimised for Sf7 to Sf12
     Sf7To12 = 0x03,

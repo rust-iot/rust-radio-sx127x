@@ -4,7 +4,7 @@
 //!
 //! Copyright 2019 Ryan Kurte
 
-use log::{trace, debug, warn, error};
+use log::{debug, error, trace, warn};
 
 use radio::State as _;
 
@@ -26,8 +26,8 @@ where
         debug!("Configuring lora mode");
 
         // Update internal config
-        self.config.channel = Channel::LoRa(channel.clone());
-        self.config.modem = Modem::LoRa(config.clone());
+        self.config.channel = Channel::LoRa(*channel);
+        self.config.modem = Modem::LoRa(*config);
 
         // Switch to sleep to change modem mode
         self.set_state(State::Sleep)?;
@@ -64,8 +64,8 @@ where
         }
 
         self.mode = Mode::LoRa;
-        self.config.modem = Modem::LoRa(config.clone());
-        self.config.channel = Channel::LoRa(channel.clone());
+        self.config.modem = Modem::LoRa(*config);
+        self.config.channel = Channel::LoRa(*channel);
 
         Ok(())
     }
@@ -205,7 +205,7 @@ where
         }
 
         // Update internal channel state
-        self.config.channel = Channel::LoRa(channel.clone());
+        self.config.channel = Channel::LoRa(*channel);
 
         Ok(())
     }
@@ -396,8 +396,9 @@ where
         let snr = self.read_reg(regs::LoRa::PKTSNRVALUE)? as i16;
 
         let (rssi, snr) = self.lora_process_rssi_snr(rssi, snr);
-        let info = PacketInfo{
-            rssi, snr: Some(snr),
+        let info = PacketInfo {
+            rssi,
+            snr: Some(snr),
         };
 
         trace!("FIFO RX {} bytes with fifo rx ptr: {}", n, r);

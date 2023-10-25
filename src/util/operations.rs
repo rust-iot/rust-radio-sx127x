@@ -29,13 +29,8 @@ where
         Operation::Receive(config) => {
             let mut buff = [0u8; 255];
 
-            do_receive(
-                radio,
-                &mut buff,
-                config.continuous,
-                *config.poll_interval,
-            )
-            .expect("Receive error");
+            do_receive(radio, &mut buff, config.continuous, *config.poll_interval)
+                .expect("Receive error");
         }
         Operation::Repeat(config) => {
             let mut buff = [0u8; 255];
@@ -52,8 +47,7 @@ where
         }
         Operation::Rssi(config) => {
             do_rssi(radio, config.continuous, *config.period).expect("RSSI error");
-        }
-        //_ => warn!("unsuppored command: {:?}", opts.command),
+        } //_ => warn!("unsuppored command: {:?}", opts.command),
     }
 
     Ok(())
@@ -93,7 +87,7 @@ where
 
 pub fn do_receive<T, I, E>(
     mut radio: T,
-    mut buff: &mut [u8],
+    buff: &mut [u8],
     continuous: bool,
     poll_interval: Duration,
 ) -> Result<usize, E>
@@ -106,11 +100,11 @@ where
 
     loop {
         if radio.check_receive(true)? {
-            let (n, info) = radio.get_received(&mut buff)?;
+            let (n, info) = radio.get_received(buff)?;
 
-            match std::str::from_utf8(&buff[0..n as usize]) {
+            match std::str::from_utf8(&buff[0..n]) {
                 Ok(s) => info!("Received: '{}' info: {:?}", s, info),
-                Err(_) => info!("Received: '{:?}' info: {:?}", &buff[0..n as usize], info),
+                Err(_) => info!("Received: '{:?}' info: {:?}", &buff[0..n], info),
             }
 
             if !continuous {
@@ -150,7 +144,7 @@ where
 
 pub fn do_repeat<T, I, E>(
     mut radio: T,
-    mut buff: &mut [u8],
+    buff: &mut [u8],
     power: i8,
     continuous: bool,
     delay: Duration,
@@ -168,11 +162,11 @@ where
 
     loop {
         if radio.check_receive(true)? {
-            let (n, info) = radio.get_received(&mut buff)?;
+            let (n, info) = radio.get_received(buff)?;
 
-            match std::str::from_utf8(&buff[0..n as usize]) {
+            match std::str::from_utf8(&buff[0..n]) {
                 Ok(s) => info!("Received: '{}' info: {:?}", s, info),
-                Err(_) => info!("Received: '{:?}' info: {:?}", &buff[0..n as usize], info),
+                Err(_) => info!("Received: '{:?}' info: {:?}", &buff[0..n], info),
             }
 
             std::thread::sleep(delay);
