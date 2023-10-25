@@ -45,3 +45,7 @@ path = "tests/integration.rs"
 required-features = ["utils"]
 
 [patch.crates-io]
+linux-embedded-hal = { git = "https://github.com/rust-embedded/linux-embedded-hal" }
+radio = { git = "https://github.com/rust-iot/radio" }
+driver-pal = { git = "https://github.com/rust-iot/driver-pal" }
+driver-cp2130 = { git = "https://github.com/rust-iot/rust-driver-cp2130" }
