@@ -4,10 +4,9 @@
 //!
 //! Copyright 2019 Ryan Kurte
 
-
 use radio::State as _;
 
-use log::{trace, debug};
+use log::{debug, trace};
 
 use crate::{Error, Mode, Sx127x};
 
@@ -83,10 +82,9 @@ where
         self.write_reg(regs::Fsk::PREAMBLELSB, config.preamble as u8)?;
 
         // Configure preamble detector
-        self.write_reg(regs::Fsk::PREAMBLEDETECT, 
-            PreambleDetect::On as u8 |
-            PreambleDetectSize::Ps2 as u8 | 
-            PREAMBLE_DETECTOR_TOL
+        self.write_reg(
+            regs::Fsk::PREAMBLEDETECT,
+            PreambleDetect::On as u8 | PreambleDetectSize::Ps2 as u8 | PREAMBLE_DETECTOR_TOL,
         )?;
 
         // Configure TXStart
@@ -97,7 +95,7 @@ where
 
         self.mode = Mode::FskOok;
         self.config.modem = Modem::FskOok(config.clone());
-        self.config.channel = Channel::FskOok(channel.clone());
+        self.config.channel = Channel::FskOok(*channel);
 
         Ok(())
     }
@@ -119,16 +117,17 @@ where
         let irq1 = Irq1::from_bits(reg).unwrap();
 
         if clear {
-            self.write_reg(regs::Fsk::IRQFLAGS1, 
-                (irq1 & (Irq1::RSSI | Irq1::PREAMBLED_DETECT)).bits())?;
+            self.write_reg(
+                regs::Fsk::IRQFLAGS1,
+                (irq1 & (Irq1::RSSI | Irq1::PREAMBLED_DETECT)).bits(),
+            )?;
         }
 
         let reg = self.read_reg(regs::Fsk::IRQFLAGS2)?;
         let irq2 = Irq2::from_bits(reg).unwrap();
 
         if clear {
-            self.write_reg(regs::Fsk::IRQFLAGS2, 
-                (irq2 & (Irq2::LOW_BAT)).bits())?;
+            self.write_reg(regs::Fsk::IRQFLAGS2, (irq2 & (Irq2::LOW_BAT)).bits())?;
         }
 
         Ok((irq1, irq2))
@@ -146,12 +145,11 @@ where
         // f32::round
         let round = |x: f32| -> u32 {
             let integer = x as u32;
-                if (x - (integer as f32)) < 0.5 {
-                   integer
-                }
-                else {
-                   integer + 1
-                }
+            if (x - (integer as f32)) < 0.5 {
+                integer
+            } else {
+                integer + 1
+            }
         };
 
         // Calculate channel configuration
@@ -257,7 +255,9 @@ where
 
         trace!(
             "check receive (state: {:?}, irq1: {:?} irq2: {:?})",
-            s, i1, i2
+            s,
+            i1,
+            i2
         );
 
         // Check for completion
@@ -288,7 +288,6 @@ where
         &mut self,
         data: &mut [u8],
     ) -> Result<(usize, PacketInfo), Error<<Hal as base::Hal>::Error>> {
-
         let mut len = [0u8; 1];
         // Read the length byte from the FIFO
         self.hal.read_buff(&mut len)?;
@@ -302,7 +301,7 @@ where
         self.hal.read_buff(&mut data[..len])?;
 
         // Read the RSSI
-        let info = PacketInfo{
+        let info = PacketInfo {
             rssi: self.fsk_poll_rssi()?,
             snr: None,
         };

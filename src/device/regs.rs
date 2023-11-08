@@ -9,9 +9,9 @@ pub enum Register {
     LoRa(LoRa),
 }
 
-impl Into<u8> for Register {
-    fn into(self) -> u8 {
-        match self {
+impl From<Register> for u8 {
+    fn from(val: Register) -> Self {
+        match val {
             Register::Common(c) => c as u8,
             Register::Fsk(f) => f as u8,
             Register::LoRa(l) => l as u8,
@@ -19,21 +19,21 @@ impl Into<u8> for Register {
     }
 }
 
-impl Into<u8> for Common {
-    fn into(self) -> u8 {
-        self as u8
+impl From<Common> for u8 {
+    fn from(val: Common) -> Self {
+        val as u8
     }
 }
 
-impl Into<u8> for LoRa {
-    fn into(self) -> u8 {
-        self as u8
+impl From<LoRa> for u8 {
+    fn from(val: LoRa) -> Self {
+        val as u8
     }
 }
 
-impl Into<u8> for Fsk {
-    fn into(self) -> u8 {
-        self as u8
+impl From<Fsk> for u8 {
+    fn from(val: Fsk) -> Self {
+        val as u8
     }
 }
 
